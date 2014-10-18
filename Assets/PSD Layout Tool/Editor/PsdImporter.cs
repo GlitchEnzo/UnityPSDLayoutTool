@@ -75,6 +75,16 @@
         private static Vector2 CanvasSize { get; set; }
 
         /// <summary>
+        /// Gets or sets the name of the current 
+        /// </summary>
+        private static string PsdName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the current <see cref="PsdFile"/> that is being imported.
+        /// </summary>
+        ////private static PsdFile CurrentPsdFile { get; set; }
+
+        /// <summary>
         /// Exports each of the art layers in the PSD file as separate textures (.png files) in the project's assets.
         /// </summary>
         /// <param name="assetPath">The path of to the .psd file relative to the project.</param>
@@ -124,15 +134,15 @@
 
             int lastSlash = asset.LastIndexOf('/');
             string assetPathWithoutFilename = asset.Remove(lastSlash + 1, asset.Length - (lastSlash + 1));
-            string assetName = asset.Replace(assetPathWithoutFilename, string.Empty).Replace(".psd", string.Empty);
+            PsdName = asset.Replace(assetPathWithoutFilename, string.Empty).Replace(".psd", string.Empty);
 
             currentPath = GetFullProjectPath() + "Assets";
-            currentPath = Path.Combine(currentPath, assetName);
+            currentPath = Path.Combine(currentPath, PsdName);
             Directory.CreateDirectory(currentPath);
 
             if (LayoutInScene || CreatePrefab)
             {
-                rootPsdGameObject = new GameObject(assetName);
+                rootPsdGameObject = new GameObject(PsdName);
                 currentGroupGameObject = rootPsdGameObject;
             }
 
@@ -406,6 +416,8 @@
             textureImporter.mipmapEnabled = false;
             textureImporter.spriteImportMode = SpriteImportMode.Single;
             textureImporter.spritePivot = new Vector2(0.5f, 0.5f);
+            textureImporter.spritePixelsPerUnit = PixelsToUnits;
+            textureImporter.spritePackingTag = PsdName;
             AssetDatabase.ImportAsset(relativePathToSprite, ImportAssetOptions.ForceUpdate);
 
             Sprite sprite = (Sprite)AssetDatabase.LoadAssetAtPath(relativePathToSprite, typeof(Sprite));
@@ -440,12 +452,13 @@
 
             MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
             meshRenderer.material = font.material;
-            meshRenderer.material.color = fillColor;
 
             TextMesh textMesh = gameObject.AddComponent<TextMesh>();
             textMesh.text = text;
             textMesh.font = font;
-            textMesh.fontSize = (int)fontSize;
+            textMesh.fontSize = 0;
+            textMesh.characterSize = fontSize / PixelsToUnits;
+            textMesh.color = fillColor;
             textMesh.anchor = TextAnchor.MiddleCenter;
 
             switch (justification)
