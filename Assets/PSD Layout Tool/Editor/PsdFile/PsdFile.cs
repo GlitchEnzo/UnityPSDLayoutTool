@@ -134,12 +134,12 @@
         {
             get
             {
-                return (ResolutionInfo)ImageResources.Find(new Predicate<ImageResource>(IsResolutionInfo));
+                return (ResolutionInfo)ImageResources.Find(IsResolutionInfo);
             }
 
             set
             {
-                ImageResource imageResource = ImageResources.Find(new Predicate<ImageResource>(IsResolutionInfo));
+                ImageResource imageResource = ImageResources.Find(IsResolutionInfo);
                 if (imageResource != null)
                     ImageResources.Remove(imageResource);
                 ImageResources.Add(value);
@@ -169,14 +169,20 @@
         public ImageCompression ImageCompression { get; set; }
 
         /// <summary>
-        /// Initializes a new instance of hte <see cref="PsdFile"/> class.
+        /// Initializes a new instance of the <see cref="PsdFile"/> class.
         /// </summary>
-        public PsdFile()
+        /// <param name="fileName">The filepath of the PSD file to open.</param>
+        public PsdFile(string fileName)
         {
             Category = "";
             Version = 1;
             Layers = new List<Layer>();
             ImageResources = new List<ImageResource>();
+
+            using (FileStream fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                Load(fileStream);
+            }
         }
 
         /// <summary>
@@ -190,22 +196,10 @@
         }
 
         /// <summary>
-        /// Loads a PSD file located at the provided filepath.
-        /// </summary>
-        /// <param name="fileName">The filepath of the PSD file to open</param>
-        public void Load(string fileName)
-        {
-            using (FileStream fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            {
-                Load(fileStream);
-            }
-        }
-
-        /// <summary>
         /// Loads a PSD file from the provided stream
         /// </summary>
         /// <param name="stream">The stream containing the PSD file data</param>
-        public void Load(Stream stream)
+        private void Load(Stream stream)
         {
             BinaryReverseReader reader = new BinaryReverseReader(stream);
             LoadHeader(reader);
@@ -261,9 +255,9 @@
                     case ResourceIDs.XMLInfo:
                         MetaData = XDocument.Load(XmlReader.Create(new MemoryStream(imgRes.Data)));
                         IEnumerable<XElement> source = MetaData.Descendants(XName.Get("Category", "http://ns.adobe.com/photoshop/1.0/"));
-                        if (source != null && Enumerable.Count<XElement>(source) > 0)
+                        if (source != null && Enumerable.Count(source) > 0)
                         {
-                            Category = Enumerable.First<XElement>(source).Value;
+                            Category = Enumerable.First(source).Value;
                             break;
                         }
                         else

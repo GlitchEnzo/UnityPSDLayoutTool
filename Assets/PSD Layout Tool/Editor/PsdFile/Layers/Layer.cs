@@ -1,217 +1,106 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Drawing;
-using System.IO;
-using System.Text;
-using UnityEngine;
-using Color = System.Drawing.Color;
-
-namespace PhotoshopFile
+﻿namespace PhotoshopFile
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.Specialized;
+    using System.Drawing;
+    using System.IO;
+
     /// <summary>
     /// Contains the data representation of a PSD layer
     /// </summary>
     public class Layer
     {
-        private static readonly int m_protectTransBit = BitVector32.CreateMask();
-        private static readonly int m_visibleBit = BitVector32.CreateMask(m_protectTransBit);
-        private static readonly int m_obsoleteBit = BitVector32.CreateMask(m_visibleBit);
-        private static readonly int m_ver5orLaterBit = BitVector32.CreateMask(m_obsoleteBit);
-        private static readonly int m_pixelDataIrrelevantBit = BitVector32.CreateMask(m_ver5orLaterBit);
-        private readonly string m_blendModeKey = "norm";
-        private BitVector32 m_flags;
-        private static bool errorShown;
+        /// <summary>
+        /// The bit flag representing transparency being protected.
+        /// </summary>
+        private static readonly int protectTransBit = BitVector32.CreateMask();
 
         /// <summary>
-        /// A list of the children <see cref="Layer"/>s that belong to this Layer.
+        /// The bit flag representing the layer being visible.
         /// </summary>
-        public List<Layer> Children { get; private set; }
+        private static readonly int visibleBit = BitVector32.CreateMask(protectTransBit);
 
         /// <summary>
-        /// Set to true if the layer contains Text information.
+        /// The bit flag representing the layer being obsolete.  ???
         /// </summary>
-        public bool IsTextLayer { get; private set; }
+        private static readonly int obsoleteBit = BitVector32.CreateMask(visibleBit);
 
         /// <summary>
-        /// If it is a text layer, this contains the actual text string
+        /// The bit flag representing the layer being version 5+.  ???
         /// </summary>
-        public string Text { get; private set; }
+        private static readonly int ver5orLaterBit = BitVector32.CreateMask(obsoleteBit);
 
         /// <summary>
-        /// If it is a text layer, this is the point size of the font
+        /// The bit flag representing the layer's pixel data being irrelevant (a group layer, for example).
         /// </summary>
-        public float FontSize { get; private set; }
+        private static readonly int pixelDataIrrelevantBit = BitVector32.CreateMask(ver5orLaterBit);
 
         /// <summary>
-        /// If it is a text layer, this is the name of the font used
+        /// The set of flags associated with this layer.
         /// </summary>
-        public string FontName { get; private set; }
+        private BitVector32 flags;
 
         /// <summary>
-        /// Gets whether or not this layer has Effects/Styles
+        /// Initializes a new instance of the <see cref="Layer"/> class using the provided reader containing the PSD file data.
         /// </summary>
-        public bool HasEffects { get; set; }
-
-        /// <summary>
-        /// If it is a text layer, this is the justification of the text.
-        /// Can be Left, Right, or Center.
-        /// </summary>
-        public string Justification { get; private set; }
-
-        /// <summary>
-        /// If it is a text layer, this is the Fill Color of the text.
-        /// Uses System.Drawing.Color object.
-        /// </summary>
-        public Color FillColor { get; private set; }
-
-        /// <summary>
-        /// If it is a text layer, this is the style of warp done on the text.
-        /// Can be warpNone, warpTwist, etc.
-        /// </summary>
-        public string WarpStyle { get; private set; }
-
-        internal PsdFile PsdFile { get; private set; }
-
-        /// <summary>
-        /// The rectangle containing the contents of the layer.
-        /// </summary>
-        public Rectangle Rect { get; private set; }
-
-        /// <summary>
-        /// Channel information
-        /// </summary>
-        public List<Channel> Channels { get; private set; }
-
-        /// <summary>
-        /// Channels sorted
-        /// </summary>
-        public SortedList<short, Channel> SortedChannels { get; private set; }
-
-        public string BlendModeKey
-        {
-            get
-            {
-                return m_blendModeKey;
-            }
-            set
-            {
-                if (value.Length != 4)
-                    throw new ArgumentException("Key length must be 4");
-            }
-        }
-
-        /// <summary>
-        /// 0 = transparent ... 255 = opaque
-        /// </summary>
-        public byte Opacity { get; set; }
-
-        /// <summary>
-        /// false = base, true = non–base
-        /// </summary>
-        public bool Clipping { get; set; }
-
-        /// <summary>
-        /// If true, the layer is visible.
-        /// </summary>
-        public bool Visible
-        {
-            get
-            {
-                return !m_flags[m_visibleBit];
-            }
-            set
-            {
-                m_flags[m_visibleBit] = !value;
-            }
-        }
-
-        /// <summary>
-        /// Protect the transparency
-        /// </summary>
-        public bool ProtectTrans
-        {
-            get
-            {
-                return m_flags[m_protectTransBit];
-            }
-            set
-            {
-                m_flags[m_protectTransBit] = value;
-            }
-        }
-
-        /// <summary>
-        /// If true, the pixel data in this layer doesn't affect the document.
-        /// </summary>
-        public bool IsPixelDataIrrelevant
-        {
-            get
-            {
-                return m_flags[m_pixelDataIrrelevantBit];
-            }
-        }
-
-        /// <summary>
-        /// The descriptive layer name
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// The blending ranges data of the layer
-        /// </summary>
-        public BlendingRanges BlendingRangesData { get; set; }
-
-        /// <summary>
-        /// The mask data of the layer
-        /// </summary>
-        public Mask MaskData { get; set; }
-
-        /// <summary>
-        /// The list of adjustment information of the layer
-        /// </summary>
-        public List<AdjusmentLayerInfo> AdjustmentInfo { get; set; }
-
-        static Layer()
-        {
-        }
-
-        /// <summary>
-        /// Constructor that builds a new layer using the provided reader containing the PSD file data
-        /// </summary>
-        /// <param name="reader">The reader containing the PSD file data</param><param name="psdFile">The PSD file to set as the reference</param>
+        /// <param name="reader">The reader containing the PSD file data.</param>
+        /// <param name="psdFile">The PSD file to set as the parent.</param>
         public Layer(BinaryReverseReader reader, PsdFile psdFile)
         {
             Children = new List<Layer>();
             PsdFile = psdFile;
+
+            // read the rect
             Rectangle rect = new Rectangle();
             rect.Y = reader.ReadInt32();
             rect.X = reader.ReadInt32();
             rect.Height = reader.ReadInt32() - rect.Y;
             rect.Width = reader.ReadInt32() - rect.X;
             Rect = rect;
-            int num1 = reader.ReadUInt16();
+
+            // read the channels
+            int channelCount = reader.ReadUInt16();
             Channels = new List<Channel>();
             SortedChannels = new SortedList<short, Channel>();
-            for (int index = 0; index < num1; ++index)
+            for (int index = 0; index < channelCount; ++index)
             {
                 Channel channel = new Channel(reader, this);
                 Channels.Add(channel);
                 SortedChannels.Add(channel.ID, channel);
             }
+
+            // read the header and verify it
             if (new string(reader.ReadChars(4)) != "8BIM")
+            {
                 throw new IOException("Layer Channelheader error!");
-            m_blendModeKey = new string(reader.ReadChars(4));
+            }
+
+            // read the blend mode key (unused) (defaults to "norm")
+            reader.ReadChars(4);
+
+            // read the opacity
             Opacity = reader.ReadByte();
-            Clipping = reader.ReadByte() > 0;
-            m_flags = new BitVector32(reader.ReadByte());
+
+            // read the clipping (unused) (< 0 = base, > 0 = non base)
             reader.ReadByte();
+
+            // read all of the flags (protectTrans, visible, obsolete, ver5orLater, pixelDataIrrelevant)
+            flags = new BitVector32(reader.ReadByte());
+
+            // skip a padding byte
+            reader.ReadByte();
+
             uint num3 = reader.ReadUInt32();
             long position1 = reader.BaseStream.Position;
             MaskData = new Mask(reader, this);
             BlendingRangesData = new BlendingRanges(reader, this);
             long position2 = reader.BaseStream.Position;
+
+            // read the name
             Name = reader.ReadPascalString();
+
+            // read the adjustment info
             int count = (int)((reader.BaseStream.Position - position2) % 4L);
             reader.ReadBytes(count);
             AdjustmentInfo = new List<AdjusmentLayerInfo>();
@@ -227,178 +116,207 @@ namespace PhotoshopFile
                     reader.BaseStream.Position = num4;
                 }
             }
-            foreach (AdjusmentLayerInfo adjusmentLayerInfo in AdjustmentInfo)
+
+            foreach (AdjusmentLayerInfo adjustmentLayerInfo in AdjustmentInfo)
             {
-                if (adjusmentLayerInfo.Key == "TySh")
+                if (adjustmentLayerInfo.Key == "TySh")
                 {
-                    IsTextLayer = true;
-                    BinaryReverseReader dataReader = adjusmentLayerInfo.DataReader;
-
-                    Seek(dataReader, "/Text");
-                    dataReader.ReadBytes(4);
-                    Text = ReadString(dataReader);
-
-                    Seek(dataReader, "/Justification ");
-                    int num5 = dataReader.ReadByte() - 48;
-                    Justification = "Left";
-                    if (num5 == 1)
-                        Justification = "Right";
-                    else if (num5 == 2)
-                        Justification = "Center";
-
-                    Seek(dataReader, "/FontSize ");
-                    FontSize = ReadFloat(dataReader);
-
-                    Seek(dataReader, "/FillColor");
-                    Seek(dataReader, "/Values [ ");
-                    float alpha = ReadFloat(dataReader);
-                    dataReader.ReadByte();
-                    float red = ReadFloat(dataReader);
-                    dataReader.ReadByte();
-                    float green = ReadFloat(dataReader);
-                    dataReader.ReadByte();
-                    float blue = ReadFloat(dataReader);
-                    FillColor = Color.FromArgb((int)(alpha * (double)byte.MaxValue), (int)(red * (double)byte.MaxValue), (int)(green * (double)byte.MaxValue), (int)(blue * (double)byte.MaxValue));
-
-                    Seek(dataReader, "/FontSet ");
-                    Seek(dataReader, "/Name");
-                    dataReader.ReadBytes(4);
-                    FontName = ReadString(dataReader);
-
-                    Seek(dataReader, "warpStyle");
-                    Seek(dataReader, "warpStyle");
-                    dataReader.ReadBytes(3);
-                    int num13 = dataReader.ReadByte();
-                    WarpStyle = string.Empty;
-
-                    for (; num13 > 0; --num13)
-                    {
-                        Layer layer = this;
-                        string str = layer.WarpStyle + dataReader.ReadChar();
-                        layer.WarpStyle = str;
-                    }
+                    ReadTextLayer(adjustmentLayerInfo.DataReader);
                 }
-                else if (adjusmentLayerInfo.Key == "luni")
+                else if (adjustmentLayerInfo.Key == "luni")
                 {
-                    BinaryReverseReader dataReader = adjusmentLayerInfo.DataReader;
+                    // read the unicode name
+                    BinaryReverseReader dataReader = adjustmentLayerInfo.DataReader;
                     dataReader.ReadBytes(3);
                     dataReader.ReadByte();
-                    Name = ReadString(dataReader).TrimEnd(new char[1]);
+                    Name = dataReader.ReadString().TrimEnd(new char[1]);
                 }
             }
+
             reader.BaseStream.Position = num4;
         }
 
-        /// <summary>
-        /// Reads a floating point number from the stream.  It reads until the newline character '\n' is found.
-        /// </summary>
-        /// <param name="reader"/>
-        /// <returns/>
-        private static float ReadFloat(BinaryReverseReader reader)
-        {
-            string str = string.Empty;
+        #region Properties
 
-            try
-            {
-                for (int index = reader.PeekChar(); index != 10; index = reader.PeekChar())
-                {
-                    if (index != 32)
-                        str = str + reader.ReadChar();
-                    else
-                        break;
-                }
-            }
-            catch (ArgumentException)
-            {
-                if (!errorShown)
-                {
-                    errorShown = true;
-					Debug.LogError("An invalid character was found in the string.");
-                }
-            }
-
-            if (string.IsNullOrEmpty(str))
-                return 0.0f;
-            
-            return Convert.ToSingle(str);
-        }
+        #region Text Layer Properties
 
         /// <summary>
-        /// Reads a string stored with a null byte preceding each character.
+        /// Gets a value indicating whether this layer is a text layer.
         /// </summary>
-        /// <param name="reader"/>
-        /// <returns/>
-        private static string ReadString(BinaryReverseReader reader)
-        {
-            string str = string.Empty;
-            try
-            {
-                while (reader.BaseStream.Position < reader.BaseStream.Length)
-                {
-                    if (reader.ReadChar() == 0)
-                        str = str + (char)reader.ReadByte();
-                    else
-                        break;
-                }
-            }
-            catch (ArgumentException)
-            {
-                if (!errorShown)
-                {
-                    errorShown = true;
-					Debug.LogError("An invalid character was found in the string.");
-                }
-            }
-            return str;
-        }
+        public bool IsTextLayer { get; private set; }
 
         /// <summary>
-        /// Searches through the stream for the given string.  If found, the position in the stream
-        /// will be the byte right AFTER the search string.  If it is not found, the position will be the
-        /// end of the stream.
+        /// Gets the actual text string, if this is a text layer.
         /// </summary>
-        /// <param name="reader"/><param name="search"/>
-        private static void Seek(BinaryReverseReader reader, string search)
-        {
-            byte[] bytes = Encoding.ASCII.GetBytes(search);
-            Seek(reader, bytes);
-        }
+        public string Text { get; private set; }
 
         /// <summary>
-        /// Searches through the stream for the given byte array.  If found, the position in the stream
-        /// will be the byte right AFTER the search array.  If it is not found, the position will be the
-        /// end of the stream.
+        /// Gets the point size of the font, if this is a text layer.
         /// </summary>
-        /// <param name="reader">The reader to use to read through the stream</param><param name="search">The byte array sequence to search for in the stream</param>
-        private static void Seek(BinaryReverseReader reader, byte[] search)
+        public float FontSize { get; private set; }
+
+        /// <summary>
+        /// Gets the name of the font used, if this is a text layer.
+        /// </summary>
+        public string FontName { get; private set; }
+
+        /// <summary>
+        /// Gets the justification of the text, if this is a text layer.
+        /// </summary>
+        public TextJustification Justification { get; private set; }
+
+        /// <summary>
+        /// Gets the Fill Color of the text, if this is a text layer.
+        /// </summary>
+        public Color FillColor { get; private set; }
+
+        /// <summary>
+        /// Gets the style of warp done on the text, if it is a text layer.
+        /// Can be warpNone, warpTwist, etc.
+        /// </summary>
+        public string WarpStyle { get; private set; }
+
+        #endregion
+
+        /// <summary>
+        /// Gets a list of the children <see cref="Layer"/>s that belong to this Layer.
+        /// </summary>
+        public List<Layer> Children { get; private set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this layer has Effects/Styles or not.
+        /// </summary>
+        public bool HasEffects { get; set; }
+
+        /// <summary>
+        /// Gets the rectangle containing the contents of the layer.
+        /// </summary>
+        public Rectangle Rect { get; private set; }
+
+        /// <summary>
+        /// Gets a list of the Channel information.
+        /// </summary>
+        public List<Channel> Channels { get; private set; }
+
+        /// <summary>
+        /// Gets a sorted list of Channel information.
+        /// </summary>
+        public SortedList<short, Channel> SortedChannels { get; private set; }
+
+        /// <summary>
+        /// Gets the opacity of this layer.  0 = transparent and 255 = opaque/solid.
+        /// </summary>
+        public byte Opacity { get; private set; }
+
+        /// <summary>
+        /// Gets a value indicating whether this layer is visible or not.
+        /// </summary>
+        public bool Visible
         {
-            while (reader.BaseStream.Position < reader.BaseStream.Length && reader.ReadByte() != search[0])
+            get
             {
-                // do nothing
-            }
-
-            if (reader.BaseStream.Position >= reader.BaseStream.Length)
-            {
-                return;
-            }
-
-            for (int index = 1; index < search.Length; ++index)
-            {
-                if (reader.ReadByte() != search[index])
-                {
-                    Seek(reader, search);
-                    break;
-                }
+                return !flags[visibleBit];
             }
         }
 
         /// <summary>
-        /// Converts the layer to a human readable string
+        /// Gets a value indicating whether this layer's pixel data is irrelevant.  This is often the case with group layers.
         /// </summary>
-        /// <returns>The layer in a human readable string format</returns>
-        public override string ToString()
+        public bool IsPixelDataIrrelevant
         {
-            return "Layer: " + Name;
+            get
+            {
+                return flags[pixelDataIrrelevantBit];
+            }
+        }
+
+        /// <summary>
+        /// Gets the name of the layer.
+        /// </summary>
+        public string Name { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the blending ranges data for this layer.
+        /// </summary>
+        public BlendingRanges BlendingRangesData { get; set; }
+
+        /// <summary>
+        /// Gets or sets the mask data for this layer.
+        /// </summary>
+        public Mask MaskData { get; set; }
+
+        /// <summary>
+        /// Gets the list of adjustment information for this layer.
+        /// </summary>
+        public List<AdjusmentLayerInfo> AdjustmentInfo { get; private set; }
+
+        /// <summary>
+        /// Gets the <see cref="PsdFile"/> that this <see cref="Layer"/> belongs to.
+        /// </summary>
+        internal PsdFile PsdFile { get; private set; }
+
+        #endregion
+
+        /// <summary>
+        /// Reads the text information for the layer.
+        /// </summary>
+        /// <param name="dataReader">The reader to use to read the text data.</param>
+        private void ReadTextLayer(BinaryReverseReader dataReader)
+        {
+            IsTextLayer = true;
+
+            // read the text layer's text string
+            dataReader.Seek("/Text");
+            dataReader.ReadBytes(4);
+            Text = dataReader.ReadString();
+
+            // read the text justification
+            dataReader.Seek("/Justification ");
+            int justification = dataReader.ReadByte() - 48;
+            Justification = TextJustification.Left;
+            if (justification == 1)
+            {
+                Justification = TextJustification.Right;
+            }
+            else if (justification == 2)
+            {
+                Justification = TextJustification.Center;
+            }
+
+            // read the font size
+            dataReader.Seek("/FontSize ");
+            FontSize = dataReader.ReadFloat();
+
+            // read the font fill color
+            dataReader.Seek("/FillColor");
+            dataReader.Seek("/Values [ ");
+            float alpha = dataReader.ReadFloat();
+            dataReader.ReadByte();
+            float red = dataReader.ReadFloat();
+            dataReader.ReadByte();
+            float green = dataReader.ReadFloat();
+            dataReader.ReadByte();
+            float blue = dataReader.ReadFloat();
+            FillColor = Color.FromArgb((int)(alpha * (double)byte.MaxValue), (int)(red * (double)byte.MaxValue), (int)(green * (double)byte.MaxValue), (int)(blue * (double)byte.MaxValue));
+
+            // read the font name
+            dataReader.Seek("/FontSet ");
+            dataReader.Seek("/Name");
+            dataReader.ReadBytes(4);
+            FontName = dataReader.ReadString();
+
+            // read the warp style
+            dataReader.Seek("warpStyle");
+            dataReader.Seek("warpStyle");
+            dataReader.ReadBytes(3);
+            int num13 = dataReader.ReadByte();
+            WarpStyle = string.Empty;
+
+            for (; num13 > 0; --num13)
+            {
+                string str = WarpStyle + dataReader.ReadChar();
+                WarpStyle = str;
+            }
         }
     }
 }

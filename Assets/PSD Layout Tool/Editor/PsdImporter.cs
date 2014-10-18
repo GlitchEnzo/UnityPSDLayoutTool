@@ -83,8 +83,7 @@
             currentDepth = MaximumDepth;
             string fullPath = Path.Combine(GetFullProjectPath(), asset.Replace('\\', '/'));
 
-            PsdFile psd = new PsdFile();
-            psd.Load(fullPath);
+            PsdFile psd = new PsdFile(fullPath);
             CanvasSize = new Vector2(psd.Width, psd.Height);
 
             // Set the depth step based on the layer count.  If there are no layers, default to 0.1f.
@@ -349,9 +348,13 @@
             }
             else
             {
-                // create text mesh
-                ////string name = MakeNameSafe(layer.Name);
-                CreateTextGameObject(layer.Name, layer.Rect, layer.Text);
+                if (LayoutInScene || CreatePrefab)
+                {
+                    // create text mesh
+                    ////string name = MakeNameSafe(layer.Name);
+                    UnityEngine.Color color = new UnityEngine.Color(layer.FillColor.R, layer.FillColor.G, layer.FillColor.B, layer.FillColor.A);
+                    CreateTextGameObject(layer.Name, layer.Rect, layer.Text, layer.FontSize, layer.Justification, color);
+                }
             }
         }
 
@@ -382,8 +385,11 @@
         /// <param name="name">The name of the text object to create.</param>
         /// <param name="rect">The <see cref="Rectangle"/> representing the size of the text area.</param>
         /// <param name="text">The actual text in the text area.</param>
+        /// <param name="fontSize">The point size of the font.</param>
+        /// <param name="justification">The justification of the text.</param>
+        /// <param name="fillColor">The color used to fill the text.</param>
         /// <returns>The text <see cref="GameObject"/>.</returns>
-        private static GameObject CreateTextGameObject(string name, Rectangle rect, string text)
+        private static GameObject CreateTextGameObject(string name, Rectangle rect, string text, float fontSize, TextJustification justification, UnityEngine.Color fillColor)
         {
             float x = rect.X / PixelsToUnits;
             float y = rect.Y / PixelsToUnits;
@@ -401,10 +407,26 @@
 
             MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
             meshRenderer.material = font.material;
+            meshRenderer.material.color = fillColor;
 
             TextMesh textMesh = gameObject.AddComponent<TextMesh>();
             textMesh.text = text;
             textMesh.font = font;
+            textMesh.fontSize = (int)fontSize;
+            textMesh.anchor = TextAnchor.MiddleCenter;
+
+            switch (justification)
+            {
+                case TextJustification.Left:
+                    textMesh.alignment = TextAlignment.Left;
+                    break;
+                case TextJustification.Right:
+                    textMesh.alignment = TextAlignment.Right;
+                    break;
+                case TextJustification.Center:
+                    textMesh.alignment = TextAlignment.Center;
+                    break;
+            }
 
             return gameObject;
         }
