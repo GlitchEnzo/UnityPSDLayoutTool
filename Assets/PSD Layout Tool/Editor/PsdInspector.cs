@@ -91,7 +91,11 @@
                         PsdImporter.Import(assetPath);
                     }
 
-                    EditorGUILayout.Separator();
+                    GUILayout.Space(3);
+
+                    GUILayout.Box(string.Empty, GUILayout.Height(1), GUILayout.MaxWidth(Screen.width - 30));
+
+                    GUILayout.Space(3);
 
                     // draw the default Inspector for the PSD
                     nativeEditor.OnInspectorGUI();
