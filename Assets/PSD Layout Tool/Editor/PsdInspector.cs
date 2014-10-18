@@ -72,23 +72,17 @@
                     // draw our custom buttons for PSD files
                     if (GUILayout.Button("Export Layers as Textures"))
                     {
-                        PsdImporter.LayoutInScene = false;
-                        PsdImporter.CreatePrefab = false;
-                        PsdImporter.Import(assetPath);
+                        PsdImporter.ExportLayersAsTextures(assetPath);
                     }
 
                     if (GUILayout.Button("Layout in Current Scene"))
                     {
-                        PsdImporter.LayoutInScene = true;
-                        PsdImporter.CreatePrefab = false;
-                        PsdImporter.Import(assetPath);
+                        PsdImporter.LayoutInCurrentScene(assetPath);
                     }
 
                     if (GUILayout.Button("Generate Prefab"))
                     {
-                        PsdImporter.LayoutInScene = false;
-                        PsdImporter.CreatePrefab = true;
-                        PsdImporter.Import(assetPath);
+                        PsdImporter.GeneratePrefab(assetPath);
                     }
 
                     GUILayout.Space(3);

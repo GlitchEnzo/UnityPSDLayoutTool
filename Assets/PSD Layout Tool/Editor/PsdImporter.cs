@@ -62,12 +62,12 @@
         /// <summary>
         /// Gets or sets a value indicating whether the import process should create <see cref="GameObject"/>s in the scene.
         /// </summary>
-        public static bool LayoutInScene { get; set; }
+        private static bool LayoutInScene { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the import process should create a prefab in the project's assets.
         /// </summary>
-        public static bool CreatePrefab { get; set; }
+        private static bool CreatePrefab { get; set; }
 
         /// <summary>
         /// Gets or sets the size (in pixels) of the entire PSD canvas.
@@ -75,10 +75,43 @@
         private static Vector2 CanvasSize { get; set; }
 
         /// <summary>
+        /// Exports each of the art layers in the PSD file as separate textures (.png files) in the project's assets.
+        /// </summary>
+        /// <param name="assetPath">The path of to the .psd file relative to the project.</param>
+        public static void ExportLayersAsTextures(string assetPath)
+        {
+            LayoutInScene = false;
+            CreatePrefab = false;
+            Import(assetPath);
+        }
+
+        /// <summary>
+        /// Lays out sprites in the current scene to match the PSD's layout.  Each layer is exported as Sprite-type textures in the project's assets.
+        /// </summary>
+        /// <param name="assetPath">The path of to the .psd file relative to the project.</param>
+        public static void LayoutInCurrentScene(string assetPath)
+        {
+            LayoutInScene = true;
+            CreatePrefab = false;
+            Import(assetPath);
+        }
+
+        /// <summary>
+        /// Generates a prefab consisting of sprites laid out to match the PSD's layout. Each layer is exported as Sprite-type textures in the project's assets.
+        /// </summary>
+        /// <param name="assetPath">The path of to the .psd file relative to the project.</param>
+        public static void GeneratePrefab(string assetPath)
+        {
+            LayoutInScene = false;
+            CreatePrefab = true;
+            Import(assetPath);
+        }
+
+        /// <summary>
         /// Imports a Photoshop document (.psd) file at the given path.
         /// </summary>
         /// <param name="asset">The path of to the .psd file relative to the project.</param>
-        public static void Import(string asset)
+        private static void Import(string asset)
         {
             currentDepth = MaximumDepth;
             string fullPath = Path.Combine(GetFullProjectPath(), asset.Replace('\\', '/'));
