@@ -14,6 +14,8 @@ How to Use
 ==========
 The PSD Layout Tool is implemented as a Unity Custom Inspector.  If you select a PSD file that you have in your project (Assets folder) special buttons will appear above the default importer settings.
 
+![](screenshots/inspector.png?raw=true)
+
 * **Export Layers as Textures**
   * Creates a .png image file for each layer in the PSD file, using the same folder structure.
 * **Layout in Current Scene**
@@ -28,3 +30,5 @@ Photoshop's "Smart Objects" are not supported, and therefore must be flattened/r
 1. Click **Layer** in the Photoshop menu
 2. Click **Rasterize**
 3. Click **All Layers**
+
+![](screenshots/photoshop.jpg?raw=true)
