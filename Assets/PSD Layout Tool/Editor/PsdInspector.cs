@@ -29,6 +29,11 @@
         private Editor nativeEditor;
 
         /// <summary>
+        /// The style used to draw the section header text.
+        /// </summary>
+        private GUIStyle guiStyle;
+
+        /// <summary>
         /// Called by Unity when any Texture file is first clicked on and the Inspector is populated.
         /// </summary>
         public void OnEnable()
@@ -50,6 +55,11 @@
             }
 
             nativeEditor = CreateEditor(serializedTarget.targetObject, t);
+
+            guiStyle = new GUIStyle();
+            guiStyle.richText = true;
+            guiStyle.fontSize = 14;
+            guiStyle.normal.textColor = Color.white;
         }
 
         /// <summary>
@@ -65,9 +75,13 @@
 
                 if (assetPath.EndsWith(".psd"))
                 {
-                    PsdImporter.MaximumDepth = EditorGUILayout.FloatField("Maximum Depth", PsdImporter.MaximumDepth);
+                    GUILayout.Label("<b>PSD Layout Tool</b>", guiStyle, GUILayout.Height(23));
 
-                    PsdImporter.PixelsToUnits = EditorGUILayout.FloatField("Pixels to Unity Units", PsdImporter.PixelsToUnits);
+                    GUIContent maximumDepthLabel = new GUIContent("Maximum Depth", "The Z value of the far back plane. The PSD will be laid out from here to 0.");
+                    PsdImporter.MaximumDepth = EditorGUILayout.FloatField(maximumDepthLabel, PsdImporter.MaximumDepth);
+
+                    GUIContent pixelsToUnitsLabel = new GUIContent("Pixels to Unity Units", "The scale of the Sprite objects, in the number of pixels to Unity world units.");
+                    PsdImporter.PixelsToUnits = EditorGUILayout.FloatField(pixelsToUnitsLabel, PsdImporter.PixelsToUnits);
 
                     // draw our custom buttons for PSD files
                     if (GUILayout.Button("Export Layers as Textures"))
@@ -90,6 +104,8 @@
                     GUILayout.Box(string.Empty, GUILayout.Height(1), GUILayout.MaxWidth(Screen.width - 30));
 
                     GUILayout.Space(3);
+
+                    GUILayout.Label("<b>Unity Texture Importer Settings</b>", guiStyle, GUILayout.Height(23));
 
                     // draw the default Inspector for the PSD
                     nativeEditor.OnInspectorGUI();
