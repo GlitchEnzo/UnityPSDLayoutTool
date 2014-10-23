@@ -412,12 +412,15 @@
 
             // change the importer to make the texture a sprite
             TextureImporter textureImporter = AssetImporter.GetAtPath(relativePathToSprite) as TextureImporter;
-            textureImporter.textureType = TextureImporterType.Sprite;
-            textureImporter.mipmapEnabled = false;
-            textureImporter.spriteImportMode = SpriteImportMode.Single;
-            textureImporter.spritePivot = new Vector2(0.5f, 0.5f);
-            textureImporter.spritePixelsPerUnit = PixelsToUnits;
-            textureImporter.spritePackingTag = PsdName;
+            if (textureImporter != null)
+            {
+                textureImporter.textureType = TextureImporterType.Sprite;
+                textureImporter.mipmapEnabled = false;
+                textureImporter.spriteImportMode = SpriteImportMode.Single;
+                textureImporter.spritePivot = new Vector2(0.5f, 0.5f);
+                textureImporter.spritePixelsPerUnit = PixelsToUnits;
+                textureImporter.spritePackingTag = PsdName;
+            }
             AssetDatabase.ImportAsset(relativePathToSprite, ImportAssetOptions.ForceUpdate);
 
             Sprite sprite = (Sprite)AssetDatabase.LoadAssetAtPath(relativePathToSprite, typeof(Sprite));
@@ -433,8 +436,7 @@
         /// <param name="fontSize">The point size of the font.</param>
         /// <param name="justification">The justification of the text.</param>
         /// <param name="fillColor">The color used to fill the text.</param>
-        /// <returns>The text <see cref="GameObject"/>.</returns>
-        private static GameObject CreateTextGameObject(string name, Rectangle rect, string text, float fontSize, TextJustification justification, UnityEngine.Color fillColor)
+        private static void CreateTextGameObject(string name, Rectangle rect, string text, float fontSize, TextJustification justification, UnityEngine.Color fillColor)
         {
             float x = rect.X / PixelsToUnits;
             float y = rect.Y / PixelsToUnits;
@@ -473,8 +475,6 @@
                     textMesh.alignment = TextAlignment.Center;
                     break;
             }
-
-            return gameObject;
         }
 
         /// <summary>
@@ -483,8 +483,7 @@
         /// <param name="name">The name of the sprite object to create.</param>
         /// <param name="rect">The <see cref="Rectangle"/> representing the size of the sprite.</param>
         /// <param name="sprite">The <see cref="Sprite"/> image to use.</param>
-        /// <returns>The sprite <see cref="GameObject"/>.</returns>
-        private static GameObject CreateSpriteGameObject(string name, Rectangle rect, Sprite sprite)
+        private static void CreateSpriteGameObject(string name, Rectangle rect, Sprite sprite)
         {
             float x = rect.X / PixelsToUnits;
             float y = rect.Y / PixelsToUnits;
@@ -500,8 +499,6 @@
 
             SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = sprite;
-
-            return gameObject;
         }
         #endregion
     }

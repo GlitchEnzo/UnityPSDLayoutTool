@@ -15,19 +15,19 @@ namespace PhotoshopFile
         /// <summary>
         /// The layer to which this channel belongs
         /// </summary>
-        public Layer Layer { get; private set; }
+        private Layer Layer { get; set; }
 
         /// <summary>
         /// 0 = red, 1 = green, etc.
         /// –1 = transparency mask
         /// –2 = user supplied layer mask
         /// </summary>
-        public short ID { get; set; }
+        public short ID { get; private set; }
 
         /// <summary>
         /// The compressed raw channel data
         /// </summary>
-        public byte[] Data { get; set; }
+        public byte[] Data { private get; set; }
 
         /// <summary>
         /// The raw image data from the channel.
@@ -47,18 +47,12 @@ namespace PhotoshopFile
             get
             {
                 if (Data == null)
+                {
                     return null;
-                else
-                    return new BinaryReverseReader(new MemoryStream(Data));
-            }
-        }
+                }
 
-        internal Channel(short id, Layer layer)
-        {
-            ID = id;
-            Layer = layer;
-            Layer.Channels.Add(this);
-            Layer.SortedChannels.Add(ID, this);
+                return new BinaryReverseReader(new MemoryStream(Data));
+            }
         }
 
         internal Channel(BinaryReverseReader reader, Layer layer)

@@ -8,11 +8,9 @@ namespace PhotoshopFile
     /// </summary>
     public class Mask
     {
-        private static readonly int m_positionIsRelativeBit = BitVector32.CreateMask();
-        private static readonly int m_disabledBit = BitVector32.CreateMask(m_positionIsRelativeBit);
-        private static readonly int m_invertOnBlendBit = BitVector32.CreateMask(m_disabledBit);
-        private Rectangle m_rect = Rectangle.Empty;
-        private BitVector32 m_flags;
+        private static readonly int positionIsRelativeBit = BitVector32.CreateMask();
+        private Rectangle rect = Rectangle.Empty;
+        private BitVector32 flags;
 
         /// <summary>
         /// The layer to which this mask belongs
@@ -26,18 +24,14 @@ namespace PhotoshopFile
         {
             get
             {
-                return m_rect;
-            }
-            set
-            {
-                m_rect = value;
+                return rect;
             }
         }
 
         /// <summary>
         /// Gets/Sets the default color of the mask
         /// </summary>
-        public byte DefaultColor { get; set; }
+        private byte DefaultColor { get; set; }
 
         /// <summary>
         /// If true, the position of the mask is relative to the layer.
@@ -46,73 +40,31 @@ namespace PhotoshopFile
         {
             get
             {
-                return m_flags[m_positionIsRelativeBit];
-            }
-            set
-            {
-                m_flags[m_positionIsRelativeBit] = value;
-            }
-        }
-
-        /// <summary>
-        /// Gets/Sets if the mask is diabled
-        /// </summary>
-        public bool Disabled
-        {
-            get
-            {
-                return m_flags[m_disabledBit];
-            }
-            set
-            {
-                m_flags[m_disabledBit] = value;
-            }
-        }
-
-        /// <summary>
-        /// if true, invert the mask when blending.
-        /// </summary>
-        public bool InvertOnBlendBit
-        {
-            get
-            {
-                return m_flags[m_invertOnBlendBit];
-            }
-            set
-            {
-                m_flags[m_invertOnBlendBit] = value;
+                return flags[positionIsRelativeBit];
             }
         }
 
         /// <summary>
         /// The raw image data from the channel.
         /// </summary>
-        public byte[] ImageData { get; set; }
-
-        static Mask()
-        {
-        }
-
-        internal Mask(Layer layer)
-        {
-            Layer = layer;
-            Layer.MaskData = this;
-        }
+        public byte[] ImageData { get; private set; }
 
         internal Mask(BinaryReverseReader reader, Layer layer)
         {
             Layer = layer;
             uint num1 = reader.ReadUInt32();
             if (num1 <= 0U)
+            {
                 return;
+            }
             long position = reader.BaseStream.Position;
-            m_rect = new Rectangle();
-            m_rect.Y = reader.ReadInt32();
-            m_rect.X = reader.ReadInt32();
-            m_rect.Height = reader.ReadInt32() - m_rect.Y;
-            m_rect.Width = reader.ReadInt32() - m_rect.X;
+            rect = new Rectangle();
+            rect.Y = reader.ReadInt32();
+            rect.X = reader.ReadInt32();
+            rect.Height = reader.ReadInt32() - rect.Y;
+            rect.Width = reader.ReadInt32() - rect.X;
             DefaultColor = reader.ReadByte();
-            m_flags = new BitVector32(reader.ReadByte());
+            flags = new BitVector32(reader.ReadByte());
             if ((int)num1 == 36)
             {
                 reader.ReadByte();  // bit vector
@@ -127,7 +79,7 @@ namespace PhotoshopFile
 
         internal void LoadPixelData(BinaryReverseReader reader)
         {
-            if (m_rect.IsEmpty || !Layer.SortedChannels.ContainsKey(-2))
+            if (rect.IsEmpty || !Layer.SortedChannels.ContainsKey(-2))
                 return;
             Channel channel = Layer.SortedChannels[-2];
             channel.Data = reader.ReadBytes(channel.Length);
@@ -138,16 +90,16 @@ namespace PhotoshopFile
                 switch (Layer.PsdFile.Depth)
                 {
                     case 1:
-                        columns = m_rect.Width;
+                        columns = rect.Width;
                         break;
                     case 8:
-                        columns = m_rect.Width;
+                        columns = rect.Width;
                         break;
                     case 16:
-                        columns = m_rect.Width * 2;
+                        columns = rect.Width * 2;
                         break;
                 }
-                channel.ImageData = new byte[m_rect.Height * columns];
+                channel.ImageData = new byte[rect.Height * columns];
                 for (int index = 0; index < channel.ImageData.Length; ++index)
                     channel.ImageData[index] = 171;
                 ImageData = (byte[])channel.ImageData.Clone();
@@ -157,12 +109,12 @@ namespace PhotoshopFile
                         dataReader.Read(channel.ImageData, 0, channel.ImageData.Length);
                         break;
                     case ImageCompression.Rle:
-						int[] nums = new int[m_rect.Height];
-						for (int i = 0; i < m_rect.Height; i++ )
+						int[] nums = new int[rect.Height];
+						for (int i = 0; i < rect.Height; i++ )
                             nums[i] = dataReader.ReadInt16();
-                        for (int index = 0; index < m_rect.Height; ++index)
+                        for (int index = 0; index < rect.Height; ++index)
                         {
-                            int startIdx = index * m_rect.Width;
+                            int startIdx = index * rect.Width;
                             RleHelper.DecodedRow(dataReader.BaseStream, channel.ImageData, startIdx, columns);
                         }
                         break;

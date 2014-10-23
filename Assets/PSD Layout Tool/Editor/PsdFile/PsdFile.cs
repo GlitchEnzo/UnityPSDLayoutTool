@@ -28,28 +28,7 @@
         /// <summary>
         /// The version of the PSD file.  It should ALWAYS be 1.
         /// </summary>
-        public short Version { get; private set; }
-
-        /// <summary>
-        /// The number of channels in the image, including any alpha channels.
-        /// Supported range is 1 to 24.
-        /// </summary>
-        public short Channels
-        {
-            get
-            {
-                return channels;
-            }
-
-            set
-            {
-                if (value < 1 || value > 24)
-                {
-                    throw new ArgumentException("Supported range is 1 to 24");
-                }
-                channels = value;
-            }
-        }
+        private short Version { get; set; }
 
         /// <summary>
         /// The height of the image in pixels.
@@ -59,15 +38,6 @@
             get
             {
                 return height;
-            }
-
-            set
-            {
-                if (value < 0 || value > 30000)
-                {
-                    throw new ArgumentException("Supported range is 1 to 30000.");
-                }
-                height = value;
             }
         }
 
@@ -80,13 +50,6 @@
             {
                 return width;
             }
-
-            set
-            {
-                if (value < 0 || value > 30000)
-                    throw new ArgumentException("Supported range is 1 to 30000.");
-                width = value;
-            }
         }
 
         /// <summary>
@@ -98,53 +61,27 @@
             {
                 return depth;
             }
-
-            set
-            {
-                if (value != 1 && value != 8 && value != 16)
-                    throw new ArgumentException("Supported values are 1, 8, and 16.");
-                depth = value;
-            }
         }
 
         /// <summary>
         /// The color mode of the file.
         /// </summary>
-        public ColorModes ColorMode { get; set; }
+        public ColorModes ColorMode { get; private set; }
 
         /// <summary>
         /// Gets the meta-data of the PSD file in XML format
         /// </summary>
-        public XDocument MetaData { get; private set; }
+        private XDocument MetaData { get; set; }
 
         /// <summary>
         /// Gets the category setting of the PSD file from the meta-data.
         /// </summary>
-        public string Category { get; private set; }
+        private string Category { get; set; }
 
         /// <summary>
         /// The Image resource blocks for the file
         /// </summary>
-        public List<ImageResource> ImageResources { get; private set; }
-
-        /// <summary>
-        /// Gets and sets the ResolutionInfo in the ImageResources
-        /// </summary>
-        public ResolutionInfo Resolution
-        {
-            get
-            {
-                return (ResolutionInfo)ImageResources.Find(IsResolutionInfo);
-            }
-
-            set
-            {
-                ImageResource imageResource = ImageResources.Find(IsResolutionInfo);
-                if (imageResource != null)
-                    ImageResources.Remove(imageResource);
-                ImageResources.Add(value);
-            }
-        }
+        private List<ImageResource> ImageResources { get; set; }
 
         /// <summary>
         /// A list of all layers contained within the PSD file
@@ -156,17 +93,17 @@
         /// If True, then number of layers is absolute value, and the first alpha channel contains the transparency data for the merged result.
         /// Otherwise, it is False
         /// </summary>
-        public bool AbsoluteAlpha { get; set; }
+        private bool AbsoluteAlpha { get; set; }
 
         /// <summary>
         /// Gets and Sets the 2D array containing the ImageData
         /// </summary>
-        public byte[][] ImageData { get; set; }
+        private byte[][] ImageData { get; set; }
 
         /// <summary>
         /// Gets and Sets the ImageCompression
         /// </summary>
-        public ImageCompression ImageCompression { get; set; }
+        private ImageCompression ImageCompression { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PsdFile"/> class.
@@ -183,16 +120,6 @@
             {
                 Load(fileStream);
             }
-        }
-
-        /// <summary>
-        /// This method implements the test condition for finding the ResolutionInfo.
-        /// </summary>
-        /// <param name="res">The ImageResource to check for ResoltionInfo</param>
-        /// <returns> True if the ImageResource contains the ResolutionInfo, False otherwise.</returns>
-        private static bool IsResolutionInfo(ImageResource res)
-        {
-            return res.ID == 1005;
         }
 
         /// <summary>
@@ -255,13 +182,11 @@
                     case ResourceIDs.XMLInfo:
                         MetaData = XDocument.Load(XmlReader.Create(new MemoryStream(imgRes.Data)));
                         IEnumerable<XElement> source = MetaData.Descendants(XName.Get("Category", "http://ns.adobe.com/photoshop/1.0/"));
-                        if (source != null && Enumerable.Count(source) > 0)
+                        if (source != null && source.Any())
                         {
-                            Category = Enumerable.First(source).Value;
-                            break;
+                            Category = source.First().Value;
                         }
-                        else
-                            break;
+                        break;
                     case ResourceIDs.ResolutionInfo:
                         imgRes = new ResolutionInfo(imgRes);
                         break;
@@ -369,7 +294,6 @@
         /// </summary>
         public enum ColorModes
         {
-            Bitmap = 0,
             Grayscale = 1,
             Indexed = 2,
             RGB = 3,

@@ -1,15 +1,15 @@
-﻿using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
-
-namespace PhotoshopFile
+﻿namespace PhotoshopFile
 {
+    using System.Drawing;
+    using System.Drawing.Imaging;
+    using System.IO;
+
     /// <summary>
     /// Summary description for Thumbnail.
     /// </summary>
     public class Thumbnail : ImageResource
     {
-        public Bitmap Image { get; set; }
+        private Bitmap image;
 
         public Thumbnail(ImageResource imgRes)
             : base(imgRes)
@@ -28,11 +28,11 @@ namespace PhotoshopFile
                 {
                     using (MemoryStream memoryStream = new MemoryStream(dataReader.ReadBytes((int)(dataReader.BaseStream.Length - dataReader.BaseStream.Position))))
                     {
-                        Image = (Bitmap)System.Drawing.Image.FromStream(memoryStream).Clone();
+                        image = (Bitmap)Image.FromStream(memoryStream).Clone();
                     }
                 }
                 else
-                    Image = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+                    image = new Bitmap(width, height, PixelFormat.Format24bppRgb);
             }
         }
     }

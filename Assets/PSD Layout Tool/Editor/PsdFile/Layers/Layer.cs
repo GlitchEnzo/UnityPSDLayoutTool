@@ -1,6 +1,5 @@
 ﻿namespace PhotoshopFile
 {
-    using System;
     using System.Collections.Generic;
     using System.Collections.Specialized;
     using System.Drawing;
@@ -238,17 +237,17 @@
         /// <summary>
         /// Gets or sets the blending ranges data for this layer.
         /// </summary>
-        public BlendingRanges BlendingRangesData { get; set; }
+        private BlendingRanges BlendingRangesData { get; set; }
 
         /// <summary>
         /// Gets or sets the mask data for this layer.
         /// </summary>
-        public Mask MaskData { get; set; }
+        public Mask MaskData { get; private set; }
 
         /// <summary>
         /// Gets the list of adjustment information for this layer.
         /// </summary>
-        public List<AdjusmentLayerInfo> AdjustmentInfo { get; private set; }
+        private List<AdjusmentLayerInfo> AdjustmentInfo { get; set; }
 
         /// <summary>
         /// Gets the <see cref="PsdFile"/> that this <see cref="Layer"/> belongs to.

@@ -70,7 +70,7 @@
             return new string(Encoding.ASCII.GetChars(bytes));
         }
 
-        protected unsafe void SwapBytes(byte* ptr, int nLength)
+        private unsafe void SwapBytes(byte* ptr, int nLength)
         {
             for (long index = 0L; index < (long)(nLength / 2); ++index)
             {
@@ -151,7 +151,7 @@
         /// end of the stream.
         /// </summary>
         /// <param name="search">The byte array sequence to search for in the stream</param>
-        public void Seek(byte[] search)
+        private void Seek(byte[] search)
         {
             while (BaseStream.Position < BaseStream.Length && ReadByte() != search[0])
             {

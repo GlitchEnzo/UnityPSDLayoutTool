@@ -2,13 +2,17 @@
 {
     /// <summary>
     /// The possible Compression methods.
-    /// 
     /// </summary>
     public enum ImageCompression
     {
+        /// <summary>
+        /// No compression.
+        /// </summary>
         Raw,
-        Rle,
-        Zip,
-        ZipPrediction,
+
+        /// <summary>
+        /// RLE compression.
+        /// </summary>
+        Rle
     }
 }

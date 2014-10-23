@@ -1,70 +1,20 @@
-﻿using System;
-using System.Drawing;
-using System.Drawing.Imaging;
-
-namespace PhotoshopFile
+﻿namespace PhotoshopFile
 {
+    using System;
+    using System.Drawing;
+    using System.Drawing.Imaging;
+
+    /// <summary>
+    /// Used to decode an image from a PSD layer.
+    /// </summary>
     public class ImageDecoder
     {
-        public static unsafe Bitmap DecodeImage(PsdFile psdFile)
-        {
-            Bitmap bitmap = new Bitmap(psdFile.Width, psdFile.Height, PixelFormat.Format32bppArgb);
-            Rectangle rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
-            BitmapData bitmapdata = bitmap.LockBits(rect, ImageLockMode.ReadWrite, bitmap.PixelFormat);
-            byte* numPtr = (byte*)bitmapdata.Scan0.ToPointer();
-            for (int index1 = 0; index1 < psdFile.Height; ++index1)
-            {
-                int num = index1 * psdFile.Width;
-                PixelData* pixelDataPtr = (PixelData*)numPtr;
-                for (int index2 = 0; index2 < psdFile.Width; ++index2)
-                {
-                    int pos = num + index2;
-                    Color color = GetColor(psdFile, pos);
-                    pixelDataPtr->Alpha = byte.MaxValue;
-                    pixelDataPtr->Red = color.R;
-                    pixelDataPtr->Green = color.G;
-                    pixelDataPtr->Blue = color.B;
-                    ++pixelDataPtr;
-                }
-                numPtr += bitmapdata.Stride;
-            }
-            bitmap.UnlockBits(bitmapdata);
-            return bitmap;
-        }
-
-        private static Color GetColor(PsdFile psdFile, int pos)
-        {
-            Color color = Color.White;
-            switch (psdFile.ColorMode)
-            {
-                case PsdFile.ColorModes.Grayscale:
-                case PsdFile.ColorModes.Duotone:
-                    color = Color.FromArgb(psdFile.ImageData[0][pos], psdFile.ImageData[0][pos], psdFile.ImageData[0][pos]);
-                    break;
-                case PsdFile.ColorModes.Indexed:
-                    int index = psdFile.ImageData[0][pos];
-                    color = Color.FromArgb(psdFile.ColorModeData[index], psdFile.ColorModeData[index + 256], psdFile.ColorModeData[index + 512]);
-                    break;
-                case PsdFile.ColorModes.RGB:
-                    color = Color.FromArgb(psdFile.ImageData[0][pos], psdFile.ImageData[1][pos], psdFile.ImageData[2][pos]);
-                    break;
-                case PsdFile.ColorModes.CMYK:
-                    color = CMYKToRGB(psdFile.ImageData[0][pos], psdFile.ImageData[1][pos], psdFile.ImageData[2][pos], psdFile.ImageData[3][pos]);
-                    break;
-                case PsdFile.ColorModes.Multichannel:
-                    color = CMYKToRGB(psdFile.ImageData[0][pos], psdFile.ImageData[1][pos], psdFile.ImageData[2][pos], 0);
-                    break;
-                case PsdFile.ColorModes.Lab:
-                    color = LabToRGB(psdFile.ImageData[0][pos], psdFile.ImageData[1][pos], psdFile.ImageData[2][pos]);
-                    break;
-            }
-            return color;
-        }
-
         public static unsafe Bitmap DecodeImage(Layer layer)
         {
             if (layer.Rect.Width == 0 || layer.Rect.Height == 0)
+            {
                 return null;
+            }
             Bitmap bitmap = new Bitmap(layer.Rect.Width, layer.Rect.Height, PixelFormat.Format32bppArgb);
             Rectangle rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
             BitmapData bitmapdata = bitmap.LockBits(rect, ImageLockMode.ReadWrite, bitmap.PixelFormat);
@@ -121,7 +71,9 @@ namespace PhotoshopFile
                     break;
             }
             if (layer.SortedChannels.ContainsKey(-1))
+            {
                 baseColor = Color.FromArgb(layer.SortedChannels[-1].ImageData[pos], baseColor);
+            }
             return baseColor;
         }
 
@@ -144,35 +96,6 @@ namespace PhotoshopFile
                 num = index >= mask.ImageData.Length ? byte.MaxValue : mask.ImageData[index];
             }
             return num;
-        }
-
-        public static unsafe Bitmap DecodeImage(Mask mask)
-        {
-            if (mask.Rect.Width == 0 || mask.Rect.Height == 0)
-                return null;
-
-            Bitmap bitmap = new Bitmap(mask.Rect.Width, mask.Rect.Height, PixelFormat.Format32bppArgb);
-            Rectangle rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
-            BitmapData bitmapdata = bitmap.LockBits(rect, ImageLockMode.ReadWrite, bitmap.PixelFormat);
-            byte* numPtr = (byte*)bitmapdata.Scan0.ToPointer();
-            for (int index1 = 0; index1 < mask.Rect.Height; ++index1)
-            {
-                int num = index1 * mask.Rect.Width;
-                PixelData* pixelDataPtr = (PixelData*)numPtr;
-                for (int index2 = 0; index2 < mask.Rect.Width; ++index2)
-                {
-                    int index3 = num + index2;
-                    Color color = Color.FromArgb(mask.ImageData[index3], mask.ImageData[index3], mask.ImageData[index3]);
-                    pixelDataPtr->Alpha = byte.MaxValue;
-                    pixelDataPtr->Red = color.R;
-                    pixelDataPtr->Green = color.G;
-                    pixelDataPtr->Blue = color.B;
-                    ++pixelDataPtr;
-                }
-                numPtr += bitmapdata.Stride;
-            }
-            bitmap.UnlockBits(bitmapdata);
-            return bitmap;
         }
 
         private static Color LabToRGB(byte lb, byte ab, byte bb)

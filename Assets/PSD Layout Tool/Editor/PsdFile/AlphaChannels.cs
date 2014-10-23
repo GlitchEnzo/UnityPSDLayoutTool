@@ -9,19 +9,6 @@ namespace PhotoshopFile
     {
         private List<string> channelNames = new List<string>();
 
-        public List<string> ChannelNames
-        {
-            get
-            {
-                return channelNames;
-            }
-        }
-
-        public AlphaChannels()
-            : base(1006)
-        {
-        }
-
         public AlphaChannels(ImageResource imgRes)
             : base(imgRes)
         {
