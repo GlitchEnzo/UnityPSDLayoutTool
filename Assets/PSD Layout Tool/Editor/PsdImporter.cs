@@ -367,17 +367,17 @@
                 Bitmap image = new Bitmap(ImageDecoder.DecodeImage(layer));
 
                 // the image decoder doesn't handle transparency in colors, so we have to do it manually
-                if (layer.Opacity != 255)
-                {
-                    for (int x = 0; x < image.Width; x++)
-                    {
-                        for (int y = 0; y < image.Height; y++)
-                        {
-                            System.Drawing.Color color = image.GetPixel(x, y);
-                            image.SetPixel(x, y, System.Drawing.Color.FromArgb(layer.Opacity, color));
-                        }
-                    }
-                }
+                ////if (layer.Opacity != 255)
+                ////{
+                ////    for (int x = 0; x < image.Width; x++)
+                ////    {
+                ////        for (int y = 0; y < image.Height; y++)
+                ////        {
+                ////            System.Drawing.Color color = image.GetPixel(x, y);
+                ////            image.SetPixel(x, y, System.Drawing.Color.FromArgb(layer.Opacity, color));
+                ////        }
+                ////    }
+                ////}
 
                 string name = MakeNameSafe(layer.Name);
                 string file = Path.Combine(currentPath, name + ".png");
@@ -421,6 +421,7 @@
                 textureImporter.spritePixelsPerUnit = PixelsToUnits;
                 textureImporter.spritePackingTag = PsdName;
             }
+
             AssetDatabase.ImportAsset(relativePathToSprite, ImportAssetOptions.ForceUpdate);
 
             Sprite sprite = (Sprite)AssetDatabase.LoadAssetAtPath(relativePathToSprite, typeof(Sprite));

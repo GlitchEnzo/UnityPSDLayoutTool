@@ -8,6 +8,10 @@
     /// </summary>
     public class Thumbnail : ImageResource
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Thumbnail"/> class.
+        /// </summary>
+        /// <param name="imgRes">The <see cref="ImageResource"/> to build the thumbnail from.</param>
         public Thumbnail(ImageResource imgRes)
             : base(imgRes)
         {

@@ -8,14 +8,10 @@
     /// </summary>
     public class ImageResource
     {
-        protected ImageResource(ImageResource imgRes)
-        {
-            ID = imgRes.ID;
-            Name = imgRes.Name;
-            Data = new byte[imgRes.Data.Length];
-            imgRes.Data.CopyTo(Data, 0);
-        }
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ImageResource"/> class using a reader.
+        /// </summary>
+        /// <param name="reader">The reader to use to create the instance.</param>
         public ImageResource(BinaryReverseReader reader)
         {
             // read the OS type
@@ -41,21 +37,40 @@
             {
                 return;
             }
+
             reader.ReadByte();
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ImageResource"/> class using another reference.
+        /// </summary>
+        /// <param name="imgRes">The reference to copy.</param>
+        protected ImageResource(ImageResource imgRes)
+        {
+            ID = imgRes.ID;
+            Name = imgRes.Name;
+            Data = new byte[imgRes.Data.Length];
+            imgRes.Data.CopyTo(Data, 0);
+        }
+
+        /// <summary>
+        /// Gets the ID of this resource.
+        /// </summary>
         public short ID { get; private set; }
 
-        private string Name { get; set; }
-
+        /// <summary>
+        /// Gets the internal data associated with this resource.
+        /// </summary>
         public byte[] Data { get; private set; }
 
-        public BinaryReverseReader DataReader
-        {
-            get
-            {
-                return new BinaryReverseReader(new MemoryStream(Data));
-            }
-        }
+        /// <summary>
+        /// Gets a <see cref="BinaryReverseReader"/> that reads the internal <see cref="Data"/>.
+        /// </summary>
+        public BinaryReverseReader DataReader { get { return new BinaryReverseReader(new MemoryStream(Data)); } }
+
+        /// <summary>
+        /// Gets or sets the name of this resource.
+        /// </summary>
+        private string Name { get; set; }
     }
 }

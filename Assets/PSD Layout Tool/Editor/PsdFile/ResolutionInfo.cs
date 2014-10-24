@@ -1,7 +1,7 @@
 ﻿namespace PhotoshopFile
 {
     /// <summary>
-    /// Summary description for ResolutionInfo.
+    /// Represents the resolution information.
     /// </summary>
     public class ResolutionInfo : ImageResource
     {

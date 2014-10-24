@@ -6,11 +6,12 @@
     public class BlendingRanges
     {
         /// <summary>
-        /// Constructor that builds a set of blending ranges from a PSD file reader
+        /// Initializes a new instance of the <see cref="BlendingRanges"/> class.
         /// </summary>
         /// <param name="reader">The reader containing the PSD file data</param>
         public BlendingRanges(BinaryReverseReader reader)
         {
+            // read the data length
             int count = reader.ReadInt32();
             if (count <= 0)
             {
