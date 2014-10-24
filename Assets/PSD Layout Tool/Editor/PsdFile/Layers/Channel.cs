@@ -1,16 +1,23 @@
-﻿using System.IO;
-
-namespace PhotoshopFile
+﻿namespace PhotoshopFile
 {
+    using System.IO;
+
     /// <summary>
     /// The channel data for a layer
     /// </summary>
     public class Channel
     {
+        internal Channel(BinaryReverseReader reader, Layer layer)
+        {
+            ID = reader.ReadInt16();
+            Length = reader.ReadInt32();
+            Layer = layer;
+        }
+
         /// <summary>
         /// The length of the compressed channel data.
         /// </summary>
-        public int Length;
+        public int Length { get; private set; }
 
         /// <summary>
         /// The layer to which this channel belongs
@@ -53,13 +60,6 @@ namespace PhotoshopFile
 
                 return new BinaryReverseReader(new MemoryStream(Data));
             }
-        }
-
-        internal Channel(BinaryReverseReader reader, Layer layer)
-        {
-            ID = reader.ReadInt16();
-            Length = reader.ReadInt32();
-            Layer = layer;
         }
 
         internal void LoadPixelData(BinaryReverseReader reader)

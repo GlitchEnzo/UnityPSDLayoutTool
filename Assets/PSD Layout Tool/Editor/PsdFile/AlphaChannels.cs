@@ -1,27 +1,27 @@
-﻿using System.Collections.Generic;
-
-namespace PhotoshopFile
+﻿namespace PhotoshopFile
 {
     /// <summary>
     /// The names of the alpha channels
     /// </summary>
     public class AlphaChannels : ImageResource
     {
-        private List<string> channelNames = new List<string>();
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AlphaChannels" /> class.
+        /// </summary>
+        /// <param name="imgRes">The image resource.</param>
         public AlphaChannels(ImageResource imgRes)
             : base(imgRes)
         {
             BinaryReverseReader dataReader = imgRes.DataReader;
             while (dataReader.BaseStream.Length - dataReader.BaseStream.Position > 0L)
             {
-                byte num = dataReader.ReadByte();
-                string str = new string(dataReader.ReadChars(num));
-                if (str.Length > 0)
-                {
-                    channelNames.Add(str);
-                }
+                // read the length of the string
+                byte length = dataReader.ReadByte();
+
+                // read the string
+                dataReader.ReadChars(length);
             }
+
             dataReader.Close();
         }
     }

@@ -21,6 +21,7 @@
             {
                 SwapBytes((byte*)&num, 2);
             }
+
             return num;
         }
 
@@ -67,16 +68,17 @@
             {
                 ReadByte();
             }
+
             return new string(Encoding.ASCII.GetChars(bytes));
         }
 
-        private unsafe void SwapBytes(byte* ptr, int nLength)
+        private unsafe void SwapBytes(byte* ptr, int length)
         {
-            for (long index = 0L; index < (long)(nLength / 2); ++index)
+            for (long index = 0L; index < (long)(length / 2); ++index)
             {
                 byte num = ptr[index];
-                ptr[index] = *(ptr + nLength - index - 1);
-                *(ptr + nLength - index - 1) = num;
+                ptr[index] = *(ptr + length - index - 1);
+                *(ptr + length - index - 1) = num;
             }
         }
 

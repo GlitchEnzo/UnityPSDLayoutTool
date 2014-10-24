@@ -13,27 +13,27 @@
         /// <summary>
         /// The bit flag representing transparency being protected.
         /// </summary>
-        private static readonly int protectTransBit = BitVector32.CreateMask();
+        private static readonly int ProtectTransparencyBit = BitVector32.CreateMask();
 
         /// <summary>
         /// The bit flag representing the layer being visible.
         /// </summary>
-        private static readonly int visibleBit = BitVector32.CreateMask(protectTransBit);
+        private static readonly int VisibleBit = BitVector32.CreateMask(ProtectTransparencyBit);
 
         /// <summary>
         /// The bit flag representing the layer being obsolete.  ???
         /// </summary>
-        private static readonly int obsoleteBit = BitVector32.CreateMask(visibleBit);
+        private static readonly int ObsoleteBit = BitVector32.CreateMask(VisibleBit);
 
         /// <summary>
         /// The bit flag representing the layer being version 5+.  ???
         /// </summary>
-        private static readonly int ver5orLaterBit = BitVector32.CreateMask(obsoleteBit);
+        private static readonly int Version5OrLaterBit = BitVector32.CreateMask(ObsoleteBit);
 
         /// <summary>
         /// The bit flag representing the layer's pixel data being irrelevant (a group layer, for example).
         /// </summary>
-        private static readonly int pixelDataIrrelevantBit = BitVector32.CreateMask(ver5orLaterBit);
+        private static readonly int PixelDataIrrelevantBit = BitVector32.CreateMask(Version5OrLaterBit);
 
         /// <summary>
         /// The set of flags associated with this layer.
@@ -93,7 +93,7 @@
             uint num3 = reader.ReadUInt32();
             long position1 = reader.BaseStream.Position;
             MaskData = new Mask(reader, this);
-            BlendingRangesData = new BlendingRanges(reader, this);
+            BlendingRangesData = new BlendingRanges(reader);
             long position2 = reader.BaseStream.Position;
 
             // read the name
@@ -102,13 +102,13 @@
             // read the adjustment info
             int count = (int)((reader.BaseStream.Position - position2) % 4L);
             reader.ReadBytes(count);
-            AdjustmentInfo = new List<AdjusmentLayerInfo>();
+            AdjustmentInfo = new List<AdjustmentLayerInfo>();
             long num4 = position1 + num3;
             while (reader.BaseStream.Position < num4)
             {
                 try
                 {
-                    AdjustmentInfo.Add(new AdjusmentLayerInfo(reader, this));
+                    AdjustmentInfo.Add(new AdjustmentLayerInfo(reader, this));
                 }
                 catch
                 {
@@ -116,7 +116,7 @@
                 }
             }
 
-            foreach (AdjusmentLayerInfo adjustmentLayerInfo in AdjustmentInfo)
+            foreach (AdjustmentLayerInfo adjustmentLayerInfo in AdjustmentInfo)
             {
                 if (adjustmentLayerInfo.Key == "TySh")
                 {
@@ -214,7 +214,7 @@
         {
             get
             {
-                return !flags[visibleBit];
+                return !flags[VisibleBit];
             }
         }
 
@@ -225,7 +225,7 @@
         {
             get
             {
-                return flags[pixelDataIrrelevantBit];
+                return flags[PixelDataIrrelevantBit];
             }
         }
 
@@ -235,24 +235,24 @@
         public string Name { get; private set; }
 
         /// <summary>
-        /// Gets or sets the blending ranges data for this layer.
-        /// </summary>
-        private BlendingRanges BlendingRangesData { get; set; }
-
-        /// <summary>
-        /// Gets or sets the mask data for this layer.
+        /// Gets the mask data for this layer.
         /// </summary>
         public Mask MaskData { get; private set; }
-
-        /// <summary>
-        /// Gets the list of adjustment information for this layer.
-        /// </summary>
-        private List<AdjusmentLayerInfo> AdjustmentInfo { get; set; }
 
         /// <summary>
         /// Gets the <see cref="PsdFile"/> that this <see cref="Layer"/> belongs to.
         /// </summary>
         internal PsdFile PsdFile { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the blending ranges data for this layer.
+        /// </summary>
+        private BlendingRanges BlendingRangesData { get; set; }
+
+        /// <summary>
+        /// Gets or sets the list of adjustment information for this layer.
+        /// </summary>
+        private List<AdjustmentLayerInfo> AdjustmentInfo { get; set; }
 
         #endregion
 

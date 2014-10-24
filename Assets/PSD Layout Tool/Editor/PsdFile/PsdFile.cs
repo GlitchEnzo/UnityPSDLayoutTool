@@ -111,29 +111,20 @@
         /// <param name="fileName">The filepath of the PSD file to open.</param>
         public PsdFile(string fileName)
         {
-            Category = "";
+            Category = string.Empty;
             Version = 1;
             Layers = new List<Layer>();
             ImageResources = new List<ImageResource>();
 
             using (FileStream fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
-                Load(fileStream);
+                BinaryReverseReader reader = new BinaryReverseReader(fileStream);
+                LoadHeader(reader);
+                LoadColorModeData(reader);
+                LoadImageResources(reader);
+                LoadLayerAndMaskInfo(reader);
+                LoadImage(reader);
             }
-        }
-
-        /// <summary>
-        /// Loads a PSD file from the provided stream
-        /// </summary>
-        /// <param name="stream">The stream containing the PSD file data</param>
-        private void Load(Stream stream)
-        {
-            BinaryReverseReader reader = new BinaryReverseReader(stream);
-            LoadHeader(reader);
-            LoadColorModeData(reader);
-            LoadImageResources(reader);
-            LoadLayerAndMaskInfo(reader);
-            LoadImage(reader);
         }
 
         /// <summary>
@@ -143,10 +134,16 @@
         private void LoadHeader(BinaryReverseReader reader)
         {
             if (new string(reader.ReadChars(4)) != "8BPS")
+            {
+                UnityEngine.Debug.LogError("The given stream is not a valid PSD file");
                 throw new IOException("The given stream is not a valid PSD file");
+            }
             Version = reader.ReadInt16();
             if (Version != 1)
+            {
+                UnityEngine.Debug.LogError("The PSD file has an invalid version");
                 throw new IOException("The PSD file has an invalid version");
+            }
             reader.BaseStream.Position += 6L;
             channels = reader.ReadInt16();
             height = reader.ReadInt32();
@@ -179,6 +176,7 @@
                     case ResourceIDs.Thumbnail1:
                         imgRes = new Thumbnail(imgRes);
                         break;
+
                     case ResourceIDs.XMLInfo:
                         MetaData = XDocument.Load(XmlReader.Create(new MemoryStream(imgRes.Data)));
                         IEnumerable<XElement> source = MetaData.Descendants(XName.Get("Category", "http://ns.adobe.com/photoshop/1.0/"));
@@ -187,9 +185,11 @@
                             Category = source.First().Value;
                         }
                         break;
+
                     case ResourceIDs.ResolutionInfo:
                         imgRes = new ResolutionInfo(imgRes);
                         break;
+
                     case ResourceIDs.AlphaChannelNames:
                         imgRes = new AlphaChannels(imgRes);
                         break;
@@ -248,7 +248,9 @@
             uint num = reader.ReadUInt32();
             if (num <= 0U)
                 return;
-            reader.ReadBytes((int)num); //global mask data
+
+            // read the global mask data
+            reader.ReadBytes((int)num);
         }
 
         private void LoadImage(BinaryReverseReader reader)

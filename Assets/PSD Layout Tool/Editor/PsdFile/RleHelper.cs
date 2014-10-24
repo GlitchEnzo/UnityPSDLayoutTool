@@ -1,7 +1,7 @@
-﻿using System.IO;
-
-namespace PhotoshopFile
+﻿namespace PhotoshopFile
 {
+    using System.IO;
+
     internal static class RleHelper
     {
         public static void DecodedRow(Stream stream, byte[] imgData, int startIdx, int columns)

@@ -1,32 +1,26 @@
-﻿using System.Collections.Specialized;
-using System.Drawing;
-
-namespace PhotoshopFile
+﻿namespace PhotoshopFile
 {
+    using System.Collections.Specialized;
+    using System.Drawing;
+
     /// <summary>
     /// The mask data for a layer
     /// </summary>
     public class Mask
     {
-        private static readonly int positionIsRelativeBit = BitVector32.CreateMask();
+        private static readonly int PositionIsRelativeBit = BitVector32.CreateMask();
         private Rectangle rect = Rectangle.Empty;
         private BitVector32 flags;
 
         /// <summary>
-        /// The layer to which this mask belongs
+        /// Gets the layer to which this mask belongs
         /// </summary>
         public Layer Layer { get; private set; }
 
         /// <summary>
-        /// The rectangle enclosing the mask.
+        /// Gets the rectangle enclosing the mask.
         /// </summary>
-        public Rectangle Rect
-        {
-            get
-            {
-                return rect;
-            }
-        }
+        public Rectangle Rect { get { return rect; } }
 
         /// <summary>
         /// Gets/Sets the default color of the mask
@@ -36,13 +30,7 @@ namespace PhotoshopFile
         /// <summary>
         /// If true, the position of the mask is relative to the layer.
         /// </summary>
-        public bool PositionIsRelative
-        {
-            get
-            {
-                return flags[positionIsRelativeBit];
-            }
-        }
+        public bool PositionIsRelative { get { return flags[PositionIsRelativeBit]; } }
 
         /// <summary>
         /// The raw image data from the channel.
@@ -109,8 +97,8 @@ namespace PhotoshopFile
                         dataReader.Read(channel.ImageData, 0, channel.ImageData.Length);
                         break;
                     case ImageCompression.Rle:
-						int[] nums = new int[rect.Height];
-						for (int i = 0; i < rect.Height; i++ )
+                        int[] nums = new int[rect.Height];
+                        for (int i = 0; i < rect.Height; i++)
                             nums[i] = dataReader.ReadInt16();
                         for (int index = 0; index < rect.Height; ++index)
                         {

@@ -7,7 +7,7 @@
     /// <summary>
     /// Used to decode an image from a PSD layer.
     /// </summary>
-    public class ImageDecoder
+    public static class ImageDecoder
     {
         public static unsafe Bitmap DecodeImage(Layer layer)
         {
