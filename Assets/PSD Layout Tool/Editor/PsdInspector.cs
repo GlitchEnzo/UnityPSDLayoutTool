@@ -19,11 +19,6 @@
     public class PsdInspector : Editor
     {
         /// <summary>
-        /// The selected TextureImporter as a <see cref="SerializedObject"/>.
-        /// </summary>
-        private SerializedObject serializedTarget;
-
-        /// <summary>
         /// The native Unity editor used to render the <see cref="TextureImporter"/>'s Inspector.
         /// </summary>
         private Editor nativeEditor;
@@ -38,8 +33,6 @@
         /// </summary>
         public void OnEnable()
         {
-            serializedTarget = new SerializedObject(target);
-
             // use reflection to get the default Inspector
             Type t = null;
             foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
@@ -54,7 +47,7 @@
                 }
             }
 
-            nativeEditor = CreateEditor(serializedTarget.targetObject, t);
+            nativeEditor = CreateEditor(target, t);
 
             guiStyle = new GUIStyle();
             guiStyle.richText = true;
@@ -71,7 +64,7 @@
             if (nativeEditor != null)
             {
                 // check if it is a PSD file selected
-                string assetPath = ((TextureImporter)serializedTarget.targetObject).assetPath;
+                string assetPath = ((TextureImporter)target).assetPath;
 
                 if (assetPath.EndsWith(".psd"))
                 {
