@@ -34,21 +34,10 @@
         public void OnEnable()
         {
             // use reflection to get the default Inspector
-            Type t = null;
-            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                foreach (Type type in assembly.GetTypes())
-                {
-                    if (type.Name.ToLower().Contains("textureimporterinspector"))
-                    {
-                        t = type;
-                        break;
-                    }
-                }
-            }
+            Type type = Type.GetType("UnityEditor.TextureImporterInspector, UnityEditor");
+            nativeEditor = CreateEditor(target, type);
 
-            nativeEditor = CreateEditor(target, t);
-
+			// set up the GUI style for the section headers
             guiStyle = new GUIStyle();
             guiStyle.richText = true;
             guiStyle.fontSize = 14;
