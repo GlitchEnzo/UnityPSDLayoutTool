@@ -418,7 +418,13 @@
                 textureImporter.mipmapEnabled = false;
                 textureImporter.spriteImportMode = SpriteImportMode.Single;
                 textureImporter.spritePivot = new Vector2(0.5f, 0.5f);
+
+#if UNITY_4_3 || UNITY_4_5
+                textureImporter.spritePixelsToUnits = PixelsToUnits;
+#elif UNITY_4_6
                 textureImporter.spritePixelsPerUnit = PixelsToUnits;
+#endif
+
                 textureImporter.spritePackingTag = PsdName;
             }
 
