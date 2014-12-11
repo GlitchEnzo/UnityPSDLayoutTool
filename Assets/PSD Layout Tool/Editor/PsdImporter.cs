@@ -9,6 +9,12 @@
     using UnityEditor;
     using UnityEngine;
 
+#if !(UNITY_4_3 || UNITY_4_5)
+	// if we are using Unity 4.6 or higher, allow using Unity UI
+	using UnityEngine.EventSystems;
+	using UnityEngine.UI;
+#endif
+
     /// <summary>
     /// Handles all of the importing for a PSD file (exporting textures, creating prefabs, etc).
     /// </summary>
@@ -59,6 +65,11 @@
         /// </summary>
         public static float PixelsToUnits { get; set; }
 
+		/// <summary>
+		/// Gets or sets a value indicating whether to use the Unity 4.6+ UI system or not.
+		/// </summary>
+		public static bool UseUnityUI { get; set; }
+
         /// <summary>
         /// Gets or sets a value indicating whether the import process should create <see cref="GameObject"/>s in the scene.
         /// </summary>
@@ -78,6 +89,11 @@
         /// Gets or sets the name of the current 
         /// </summary>
         private static string PsdName { get; set; }
+
+		/// <summary>
+		/// Gets or sets the Unity 4.6+ UI canvas.
+		/// </summary>
+		private static GameObject Canvas { get; set;}
 
         /// <summary>
         /// Gets or sets the current <see cref="PsdFile"/> that is being imported.
@@ -142,8 +158,22 @@
 
             if (LayoutInScene || CreatePrefab)
             {
-                rootPsdGameObject = new GameObject(PsdName);
-                currentGroupGameObject = rootPsdGameObject;
+#if UNITY_4_3 || UNITY_4_5
+				rootPsdGameObject = new GameObject(PsdName);
+				currentGroupGameObject = rootPsdGameObject;
+#else // Unity 4.6+
+				if (UseUnityUI)
+				{
+					CreateUIEventSystem();
+					CreateUICanvas();
+					rootPsdGameObject = Canvas;
+				}
+				else
+				{
+					rootPsdGameObject = new GameObject(PsdName);
+				}
+				currentGroupGameObject = rootPsdGameObject;
+#endif 
             }
 
             List<Layer> tree = BuildLayerTree(psd.Layers);
@@ -421,7 +451,7 @@
 
 #if UNITY_4_3 || UNITY_4_5
                 textureImporter.spritePixelsToUnits = PixelsToUnits;
-#elif UNITY_4_6
+#else // Unity 4.6+
                 textureImporter.spritePixelsPerUnit = PixelsToUnits;
 #endif
 
@@ -507,6 +537,40 @@
             SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = sprite;
         }
+
+// only allow Unity UI creation in Unity 4.6 or higher
+#if !(UNITY_4_3 || UNITY_4_5)
+		/// <summary>
+		/// Creates the Unity UI event system game object that handles all input.
+		/// </summary>
+		private static void CreateUIEventSystem()
+		{
+			if (!GameObject.Find("EventSystem"))
+			{
+				GameObject gameObject = new GameObject("EventSystem");
+				gameObject.AddComponent<EventSystem>();
+				gameObject.AddComponent<StandaloneInputModule>();
+				gameObject.AddComponent<TouchInputModule>();
+			}
+		}
+
+		/// <summary>
+		/// Creates a Unity UI <see cref="Canvas"/>.
+		/// </summary>
+		private static void CreateUICanvas()
+		{
+			Canvas = new GameObject(PsdName);
+
+			Canvas canvas = Canvas.AddComponent<Canvas>();
+			canvas.renderMode = RenderMode.WorldSpace;
+
+			RectTransform transform = Canvas.GetComponent<RectTransform>();
+			transform.sizeDelta = CanvasSize;
+
+			Canvas.AddComponent<CanvasScaler>();
+			Canvas.AddComponent<GraphicRaycaster>();
+		}
+#endif
         #endregion
     }
 }
