@@ -1,4 +1,6 @@
-﻿namespace PsdLayoutTool
+﻿using System;
+
+namespace PsdLayoutTool
 {
     using System.Collections.Generic;
     using System.Drawing;
@@ -10,9 +12,9 @@
     using UnityEngine;
 
 #if !(UNITY_4_3 || UNITY_4_5)
-	// if we are using Unity 4.6 or higher, allow using Unity UI
-	using UnityEngine.EventSystems;
-	using UnityEngine.UI;
+    // if we are using Unity 4.6 or higher, allow using Unity UI
+    using UnityEngine.EventSystems;
+    using UnityEngine.UI;
 #endif
 
     /// <summary>
@@ -65,10 +67,10 @@
         /// </summary>
         public static float PixelsToUnits { get; set; }
 
-		/// <summary>
-		/// Gets or sets a value indicating whether to use the Unity 4.6+ UI system or not.
-		/// </summary>
-		public static bool UseUnityUI { get; set; }
+        /// <summary>
+        /// Gets or sets a value indicating whether to use the Unity 4.6+ UI system or not.
+        /// </summary>
+        public static bool UseUnityUI { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the import process should create <see cref="GameObject"/>s in the scene.
@@ -90,10 +92,10 @@
         /// </summary>
         private static string PsdName { get; set; }
 
-		/// <summary>
-		/// Gets or sets the Unity 4.6+ UI canvas.
-		/// </summary>
-		private static GameObject Canvas { get; set;}
+        /// <summary>
+        /// Gets or sets the Unity 4.6+ UI canvas.
+        /// </summary>
+        private static GameObject Canvas { get; set; }
 
         /// <summary>
         /// Gets or sets the current <see cref="PsdFile"/> that is being imported.
@@ -162,18 +164,18 @@
 				rootPsdGameObject = new GameObject(PsdName);
 				currentGroupGameObject = rootPsdGameObject;
 #else // Unity 4.6+
-				if (UseUnityUI)
-				{
-					CreateUIEventSystem();
-					CreateUICanvas();
-					rootPsdGameObject = Canvas;
-				}
-				else
-				{
-					rootPsdGameObject = new GameObject(PsdName);
-				}
-				currentGroupGameObject = rootPsdGameObject;
-#endif 
+                if (UseUnityUI)
+                {
+                    CreateUIEventSystem();
+                    CreateUICanvas();
+                    rootPsdGameObject = Canvas;
+                }
+                else
+                {
+                    rootPsdGameObject = new GameObject(PsdName);
+                }
+                currentGroupGameObject = rootPsdGameObject;
+#endif
             }
 
             List<Layer> tree = BuildLayerTree(psd.Layers);
@@ -416,7 +418,16 @@
                 if (LayoutInScene || CreatePrefab)
                 {
                     Sprite sprite = ImportSprite(GetRelativePath(file));
-                    CreateSpriteGameObject(name, layer.Rect, sprite);
+                    if (!UseUnityUI)
+                    {
+                        CreateSpriteGameObject(name, layer.Rect, sprite);
+                    }
+                    else
+                    {
+#if !(UNITY_4_3 || UNITY_4_5)
+                        CreateUIImage(name, layer.Rect, sprite);
+#endif
+                    }
                 }
             }
             else
@@ -424,9 +435,17 @@
                 if (LayoutInScene || CreatePrefab)
                 {
                     // create text mesh
-                    ////string name = MakeNameSafe(layer.Name);
                     UnityEngine.Color color = new UnityEngine.Color(layer.FillColor.R, layer.FillColor.G, layer.FillColor.B, layer.FillColor.A);
-                    CreateTextGameObject(layer.Name, layer.Rect, layer.Text, layer.FontSize, layer.Justification, color);
+                    if (!UseUnityUI)
+                    {
+                        CreateTextGameObject(layer.Name, layer.Rect, layer.Text, layer.FontSize, layer.Justification, color);
+                    }
+                    else
+                    {
+#if !(UNITY_4_3 || UNITY_4_5)
+                        CreateUIText(layer.Name, layer.Rect, layer.Text, layer.FontSize, layer.Justification, color);
+#endif
+                    }
                 }
             }
         }
@@ -538,38 +557,135 @@
             spriteRenderer.sprite = sprite;
         }
 
-// only allow Unity UI creation in Unity 4.6 or higher
+        #endregion
+
+        #region Unity 4.6+ UI
+        // only allow Unity UI creation in Unity 4.6 or higher
 #if !(UNITY_4_3 || UNITY_4_5)
-		/// <summary>
-		/// Creates the Unity UI event system game object that handles all input.
-		/// </summary>
-		private static void CreateUIEventSystem()
-		{
-			if (!GameObject.Find("EventSystem"))
-			{
-				GameObject gameObject = new GameObject("EventSystem");
-				gameObject.AddComponent<EventSystem>();
-				gameObject.AddComponent<StandaloneInputModule>();
-				gameObject.AddComponent<TouchInputModule>();
-			}
-		}
+        /// <summary>
+        /// Creates the Unity UI event system game object that handles all input.
+        /// </summary>
+        private static void CreateUIEventSystem()
+        {
+            if (!GameObject.Find("EventSystem"))
+            {
+                GameObject gameObject = new GameObject("EventSystem");
+                gameObject.AddComponent<EventSystem>();
+                gameObject.AddComponent<StandaloneInputModule>();
+                gameObject.AddComponent<TouchInputModule>();
+            }
+        }
 
-		/// <summary>
-		/// Creates a Unity UI <see cref="Canvas"/>.
-		/// </summary>
-		private static void CreateUICanvas()
-		{
-			Canvas = new GameObject(PsdName);
+        /// <summary>
+        /// Creates a Unity UI <see cref="Canvas"/>.
+        /// </summary>
+        private static void CreateUICanvas()
+        {
+            Canvas = new GameObject(PsdName);
 
-			Canvas canvas = Canvas.AddComponent<Canvas>();
-			canvas.renderMode = RenderMode.WorldSpace;
+            Canvas canvas = Canvas.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
 
-			RectTransform transform = Canvas.GetComponent<RectTransform>();
-			transform.sizeDelta = CanvasSize;
+            RectTransform transform = Canvas.GetComponent<RectTransform>();
+            Vector2 scaledCanvasSize = new Vector2(CanvasSize.x / PixelsToUnits, CanvasSize.y / PixelsToUnits);
+            transform.sizeDelta = scaledCanvasSize;
 
-			Canvas.AddComponent<CanvasScaler>();
-			Canvas.AddComponent<GraphicRaycaster>();
-		}
+            CanvasScaler scaler = Canvas.AddComponent<CanvasScaler>();
+            scaler.dynamicPixelsPerUnit = PixelsToUnits;
+            scaler.referencePixelsPerUnit = PixelsToUnits;
+
+            Canvas.AddComponent<GraphicRaycaster>();
+        }
+
+        /// <summary>
+        /// Creates a Unity UI <see cref="UnityEngine.UI.Image"/> <see cref="GameObject"/> with a <see cref="Sprite"/> from a PSD <see cref="Layer"/>.
+        /// </summary>
+        /// <param name="name">The name of the image object to create.</param>
+        /// <param name="rect">The <see cref="Rectangle"/> representing the size of the sprite.</param>
+        /// <param name="sprite">The <see cref="Sprite"/> image to use.</param>
+        private static void CreateUIImage(string name, Rectangle rect, Sprite sprite)
+        {
+            float x = rect.X / PixelsToUnits;
+            float y = rect.Y / PixelsToUnits;
+
+            // Photoshop increase Y while going down. Unity increases Y while going up.  So, we need to reverse the Y position.
+            y = (CanvasSize.y / PixelsToUnits) - y;
+
+            // Photoshop uses the upper left corner as the pivot (0,0).  Unity defaults to use the center as (0,0), so we must offset the positions.
+            x = x - ((CanvasSize.x / 2) / PixelsToUnits);
+            y = y - ((CanvasSize.y / 2) / PixelsToUnits);
+
+            float width = rect.Width / PixelsToUnits;
+            float height = rect.Height / PixelsToUnits;
+
+            GameObject gameObject = new GameObject(name);
+            gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+            gameObject.transform.parent = currentGroupGameObject.transform;
+
+            currentDepth -= depthStep;
+
+            UnityEngine.UI.Image image = gameObject.AddComponent<UnityEngine.UI.Image>();
+            image.sprite = sprite;
+
+            RectTransform transform = gameObject.GetComponent<RectTransform>();
+            transform.sizeDelta = new Vector2(width, height);
+        }
+
+        /// <summary>
+        /// Creates a Unity UI <see cref="UnityEngine.UI.Text"/> <see cref="GameObject"/> with the text from a PSD <see cref="Layer"/>.
+        /// </summary>
+        /// <param name="name">The name of the text object to create.</param>
+        /// <param name="rect">The <see cref="Rectangle"/> representing the size of the text area.</param>
+        /// <param name="text">The actual text in the text area.</param>
+        /// <param name="fontSize">The point size of the font.</param>
+        /// <param name="justification">The justification of the text.</param>
+        /// <param name="fillColor">The color used to fill the text.</param>
+        private static void CreateUIText(string name, Rectangle rect, string text, float fontSize, TextJustification justification, UnityEngine.Color fillColor)
+        {
+            float x = rect.X / PixelsToUnits;
+            float y = rect.Y / PixelsToUnits;
+
+            // Photoshop increase Y while going down. Unity increases Y while going up.  So, we need to reverse the Y position.
+            y = (CanvasSize.y / PixelsToUnits) - y;
+
+            // Photoshop uses the upper left corner as the pivot (0,0).  Unity defaults to use the center as (0,0), so we must offset the positions.
+            x = x - ((CanvasSize.x / 2) / PixelsToUnits);
+            y = y - ((CanvasSize.y / 2) / PixelsToUnits);
+            
+            float width = rect.Width / PixelsToUnits;
+            float height = rect.Height / PixelsToUnits;
+
+            GameObject gameObject = new GameObject(name);
+            gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+            gameObject.transform.parent = currentGroupGameObject.transform;
+
+            currentDepth -= depthStep;
+
+            UnityEngine.Font font = Resources.GetBuiltinResource<UnityEngine.Font>("Arial.ttf");
+
+            Text textUI = gameObject.AddComponent<Text>();
+            textUI.text = text;
+            textUI.font = font;
+            textUI.fontSize = Mathf.Max((int)(fontSize / PixelsToUnits), 1);
+            textUI.color = fillColor;
+            textUI.alignment = TextAnchor.MiddleCenter;
+
+            switch (justification)
+            {
+                case TextJustification.Left:
+                    textUI.alignment = TextAnchor.MiddleLeft;
+                    break;
+                case TextJustification.Right:
+                    textUI.alignment = TextAnchor.MiddleRight;
+                    break;
+                case TextJustification.Center:
+                    textUI.alignment = TextAnchor.MiddleCenter;
+                    break;
+            }
+
+            RectTransform transform = gameObject.GetComponent<RectTransform>();
+            transform.sizeDelta = new Vector2(width, height);
+        }
 #endif
         #endregion
     }
