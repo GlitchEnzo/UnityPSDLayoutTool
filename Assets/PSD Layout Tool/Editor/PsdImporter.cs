@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 
 namespace PsdLayoutTool
 {
@@ -369,22 +370,60 @@ namespace PsdLayoutTool
         /// <param name="layer">The layer that is a folder.</param>
         private static void ExportFolderLayer(Layer layer)
         {
-            string oldPath = currentPath;
-            GameObject oldGroupObject = currentGroupGameObject;
-
-            currentPath = Path.Combine(currentPath, layer.Name);
-            Directory.CreateDirectory(currentPath);
-
-            if (LayoutInScene || CreatePrefab)
+            if (layer.Name.Contains("|Button", StringComparison.InvariantCultureIgnoreCase))
             {
-                currentGroupGameObject = new GameObject(layer.Name);
-                currentGroupGameObject.transform.parent = oldGroupObject.transform;
+                layer.Name = layer.Name.Replace("|Button", string.Empty, StringComparison.InvariantCultureIgnoreCase);
+#if !(UNITY_4_3 || UNITY_4_5)
+                if (UseUnityUI)
+                {
+                    CreateButton(layer);
+                }
+#endif
             }
+            else
+            {
+                string oldPath = currentPath;
+                GameObject oldGroupObject = currentGroupGameObject;
 
-            ExportTree(layer.Children);
+                currentPath = Path.Combine(currentPath, layer.Name);
+                Directory.CreateDirectory(currentPath);
 
-            currentPath = oldPath;
-            currentGroupGameObject = oldGroupObject;
+                if (LayoutInScene || CreatePrefab)
+                {
+                    currentGroupGameObject = new GameObject(layer.Name);
+                    currentGroupGameObject.transform.parent = oldGroupObject.transform;
+                }
+
+                ExportTree(layer.Children);
+
+                currentPath = oldPath;
+                currentGroupGameObject = oldGroupObject;
+            }
+        }
+
+        private static bool Contains(this string source, string toCheck, StringComparison comp)
+        {
+            return source.IndexOf(toCheck, comp) >= 0;
+        }
+
+        private static string Replace(this string str, string oldValue, string newValue, StringComparison comparison)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            int previousIndex = 0;
+            int index = str.IndexOf(oldValue, comparison);
+            while (index != -1)
+            {
+                sb.Append(str.Substring(previousIndex, index - previousIndex));
+                sb.Append(newValue);
+                index += oldValue.Length;
+
+                previousIndex = index;
+                index = str.IndexOf(oldValue, index, comparison);
+            }
+            sb.Append(str.Substring(previousIndex));
+
+            return sb.ToString();
         }
 
         /// <summary>
@@ -685,6 +724,14 @@ namespace PsdLayoutTool
 
             RectTransform transform = gameObject.GetComponent<RectTransform>();
             transform.sizeDelta = new Vector2(width, height);
+        }
+
+        private static void CreateButton(Layer layer)
+        {
+            foreach (Layer child in layer.Children)
+            {
+                
+            }
         }
 #endif
         #endregion

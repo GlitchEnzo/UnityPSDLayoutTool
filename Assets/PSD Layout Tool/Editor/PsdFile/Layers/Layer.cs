@@ -232,7 +232,7 @@
         /// <summary>
         /// Gets the name of the layer.
         /// </summary>
-        public string Name { get; private set; }
+        public string Name { get; set; }
 
         /// <summary>
         /// Gets the mask data for this layer.
