@@ -274,12 +274,12 @@ namespace PsdLayoutTool
         private static string MakeNameSafe(string name)
         {
             // replace all special characters with an underscore
-            Regex pattern = new Regex("[/:&.<>,$¢;]");
+            Regex pattern = new Regex("[/:&.<>,$¢;+]");
             string newName = pattern.Replace(name, "_");
 
             if (name != newName)
             {
-                Debug.Log(string.Format("{0} was changed to {1}", name, newName));
+                Debug.Log(string.Format("Layer name \"{0}\" was changed to \"{1}\"", name, newName));
             }
 
             return newName;
@@ -370,9 +370,9 @@ namespace PsdLayoutTool
         /// <param name="layer">The layer that is a folder.</param>
         private static void ExportFolderLayer(Layer layer)
         {
-            if (layer.Name.Contains("|Button", StringComparison.InvariantCultureIgnoreCase))
+            if (layer.Name.ContainsIgnoreCase("|Button"))
             {
-                layer.Name = layer.Name.Replace("|Button", string.Empty, StringComparison.InvariantCultureIgnoreCase);
+                layer.Name = layer.Name.ReplaceIgnoreCase("|Button", string.Empty);
 #if !(UNITY_4_3 || UNITY_4_5)
                 if (UseUnityUI)
                 {
@@ -382,6 +382,7 @@ namespace PsdLayoutTool
             }
             else
             {
+                layer.Name = MakeNameSafe(layer.Name);
                 string oldPath = currentPath;
                 GameObject oldGroupObject = currentGroupGameObject;
 
@@ -401,17 +402,17 @@ namespace PsdLayoutTool
             }
         }
 
-        private static bool Contains(this string source, string toCheck, StringComparison comp)
+        private static bool ContainsIgnoreCase(this string source, string toCheck)
         {
-            return source.IndexOf(toCheck, comp) >= 0;
+            return source.IndexOf(toCheck, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        private static string Replace(this string str, string oldValue, string newValue, StringComparison comparison)
+        private static string ReplaceIgnoreCase(this string str, string oldValue, string newValue)
         {
             StringBuilder sb = new StringBuilder();
 
             int previousIndex = 0;
-            int index = str.IndexOf(oldValue, comparison);
+            int index = str.IndexOf(oldValue, StringComparison.OrdinalIgnoreCase);
             while (index != -1)
             {
                 sb.Append(str.Substring(previousIndex, index - previousIndex));
@@ -419,7 +420,7 @@ namespace PsdLayoutTool
                 index += oldValue.Length;
 
                 previousIndex = index;
-                index = str.IndexOf(oldValue, index, comparison);
+                index = str.IndexOf(oldValue, index, StringComparison.OrdinalIgnoreCase);
             }
             sb.Append(str.Substring(previousIndex));
 
@@ -728,9 +729,26 @@ namespace PsdLayoutTool
 
         private static void CreateButton(Layer layer)
         {
+            // TODO: Look for a ClipRect and apply it to each sprite
+
             foreach (Layer child in layer.Children)
             {
-                
+                if (child.Name.ContainsIgnoreCase("|ButtonDisabled"))
+                {
+                    
+                }
+                else if (child.Name.ContainsIgnoreCase("|ButtonHighlighted"))
+                {
+
+                }
+                else if (child.Name.ContainsIgnoreCase("|ButtonPressed"))
+                {
+
+                }
+                else if (child.Name.ContainsIgnoreCase("|ButtonDefault"))
+                {
+
+                }
             }
         }
 #endif
