@@ -149,7 +149,7 @@ namespace PsdLayoutTool
             CanvasSize = new Vector2(psd.Width, psd.Height);
 
             // Set the depth step based on the layer count.  If there are no layers, default to 0.1f.
-            depthStep = psd.Layers.Count != 0 ? currentDepth / psd.Layers.Count : 0.1f;
+            depthStep = psd.Layers.Count != 0 ? MaximumDepth / psd.Layers.Count : 0.1f;
 
             int lastSlash = asset.LastIndexOf('/');
             string assetPathWithoutFilename = asset.Remove(lastSlash + 1, asset.Length - (lastSlash + 1));
@@ -210,7 +210,7 @@ namespace PsdLayoutTool
                 return null;
             }
 
-            // PSD layers are stored backwards (front to back), so we must reverse them
+            // PSD layers are stored backwards (with End Groups before Start Groups), so we must reverse them
             flatLayers.Reverse();
 
             List<Layer> tree = new List<Layer>();
@@ -342,6 +342,7 @@ namespace PsdLayoutTool
         /// <param name="tree">The layer tree to export.</param>
         private static void ExportTree(List<Layer> tree)
         {
+            // we must go through the tree in reverse order since Unity draws from back to front, but PSDs are stored front to back
             for (int i = tree.Count - 1; i >= 0; i--)
             {
                 ExportLayer(tree[i]);
@@ -354,6 +355,7 @@ namespace PsdLayoutTool
         /// <param name="layer">The layer to export.</param>
         private static void ExportLayer(Layer layer)
         {
+            layer.Name = MakeNameSafe(layer.Name);
             if (layer.Children.Count > 0 || layer.Rect.Width == 0)
             {
                 ExportFolderLayer(layer);
@@ -382,7 +384,6 @@ namespace PsdLayoutTool
             }
             else
             {
-                layer.Name = MakeNameSafe(layer.Name);
                 string oldPath = currentPath;
                 GameObject oldGroupObject = currentGroupGameObject;
 
@@ -435,59 +436,85 @@ namespace PsdLayoutTool
         {
             if (!layer.IsTextLayer)
             {
-                // decode the layer into an image (must be a bitmap so we can set pixels later)
-                Bitmap image = new Bitmap(ImageDecoder.DecodeImage(layer));
-
-                // the image decoder doesn't handle transparency in colors, so we have to do it manually
-                ////if (layer.Opacity != 255)
-                ////{
-                ////    for (int x = 0; x < image.Width; x++)
-                ////    {
-                ////        for (int y = 0; y < image.Height; y++)
-                ////        {
-                ////            System.Drawing.Color color = image.GetPixel(x, y);
-                ////            image.SetPixel(x, y, System.Drawing.Color.FromArgb(layer.Opacity, color));
-                ////        }
-                ////    }
-                ////}
-
-                string name = MakeNameSafe(layer.Name);
-                string file = Path.Combine(currentPath, name + ".png");
-                image.Save(file, ImageFormat.Png);
-
                 if (LayoutInScene || CreatePrefab)
                 {
-                    Sprite sprite = ImportSprite(GetRelativePath(file));
+                    // create a sprite from the layer to lay it out in the scene
+                    Sprite sprite = CreateSprite(layer);
                     if (!UseUnityUI)
                     {
-                        CreateSpriteGameObject(name, layer.Rect, sprite);
+                        CreateSpriteGameObject(layer, sprite);
                     }
                     else
                     {
 #if !(UNITY_4_3 || UNITY_4_5)
-                        CreateUIImage(name, layer.Rect, sprite);
+                        CreateUIImage(layer, sprite);
 #endif
                     }
+                }
+                else
+                {
+                    // it is not being laid out in the scene, so simply save out the .png file
+                    CreatePNG(layer);
                 }
             }
             else
             {
+                // it is a text layer
                 if (LayoutInScene || CreatePrefab)
                 {
                     // create text mesh
-                    UnityEngine.Color color = new UnityEngine.Color(layer.FillColor.R, layer.FillColor.G, layer.FillColor.B, layer.FillColor.A);
                     if (!UseUnityUI)
                     {
-                        CreateTextGameObject(layer.Name, layer.Rect, layer.Text, layer.FontSize, layer.Justification, color);
+                        CreateTextGameObject(layer);
                     }
                     else
                     {
 #if !(UNITY_4_3 || UNITY_4_5)
-                        CreateUIText(layer.Name, layer.Rect, layer.Text, layer.FontSize, layer.Justification, color);
+                        CreateUIText(layer);
 #endif
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Saves the given <see cref="Layer"/> as a PNG on the hard drive.
+        /// </summary>
+        /// <param name="layer">The <see cref="Layer"/> to save as a PNG.</param>
+        /// <returns>The filepath to the created PNG file.</returns>
+        private static string CreatePNG(Layer layer)
+        {
+            // decode the layer into an image (must be a bitmap so we can set pixels later)
+            Bitmap image = new Bitmap(ImageDecoder.DecodeImage(layer));
+
+            // the image decoder doesn't handle transparency in colors, so we have to do it manually
+            ////if (layer.Opacity != 255)
+            ////{
+            ////    for (int x = 0; x < image.Width; x++)
+            ////    {
+            ////        for (int y = 0; y < image.Height; y++)
+            ////        {
+            ////            System.Drawing.Color color = image.GetPixel(x, y);
+            ////            image.SetPixel(x, y, System.Drawing.Color.FromArgb(layer.Opacity, color));
+            ////        }
+            ////    }
+            ////}
+
+            string file = Path.Combine(currentPath, layer.Name + ".png");
+            image.Save(file, ImageFormat.Png);
+
+            return file;
+        }
+
+        /// <summary>
+        /// Creates a <see cref="Sprite"/> from the given <see cref="Layer"/>.
+        /// </summary>
+        /// <param name="layer">The <see cref="Layer"/> to use to create a <see cref="Sprite"/>.</param>
+        /// <returns>The created <see cref="Sprite"/> object.</returns>
+        private static Sprite CreateSprite(Layer layer)
+        {
+            string file = CreatePNG(layer);
+            return ImportSprite(GetRelativePath(file));
         }
 
         /// <summary>
@@ -507,6 +534,7 @@ namespace PsdLayoutTool
                 textureImporter.mipmapEnabled = false;
                 textureImporter.spriteImportMode = SpriteImportMode.Single;
                 textureImporter.spritePivot = new Vector2(0.5f, 0.5f);
+                textureImporter.maxTextureSize = 2048;
 
 #if UNITY_4_3 || UNITY_4_5
                 textureImporter.spritePixelsToUnits = PixelsToUnits;
@@ -526,21 +554,18 @@ namespace PsdLayoutTool
         /// <summary>
         /// Creates a <see cref="GameObject"/> with a <see cref="TextMesh"/> from the given <see cref="Layer"/>.
         /// </summary>
-        /// <param name="name">The name of the text object to create.</param>
-        /// <param name="rect">The <see cref="Rectangle"/> representing the size of the text area.</param>
-        /// <param name="text">The actual text in the text area.</param>
-        /// <param name="fontSize">The point size of the font.</param>
-        /// <param name="justification">The justification of the text.</param>
-        /// <param name="fillColor">The color used to fill the text.</param>
-        private static void CreateTextGameObject(string name, Rectangle rect, string text, float fontSize, TextJustification justification, UnityEngine.Color fillColor)
+        /// <param name="layer">The <see cref="Layer"/> to create a <see cref="TextMesh"/> from.</param>
+        private static void CreateTextGameObject(Layer layer)
         {
-            float x = rect.X / PixelsToUnits;
-            float y = rect.Y / PixelsToUnits;
-            y = (CanvasSize.y / PixelsToUnits) - y;
-            float width = rect.Width / PixelsToUnits;
-            float height = rect.Height / PixelsToUnits;
+            UnityEngine.Color color = new UnityEngine.Color(layer.FillColor.R, layer.FillColor.G, layer.FillColor.B, layer.FillColor.A);
 
-            GameObject gameObject = new GameObject(name);
+            float x = layer.Rect.X / PixelsToUnits;
+            float y = layer.Rect.Y / PixelsToUnits;
+            y = (CanvasSize.y / PixelsToUnits) - y;
+            float width = layer.Rect.Width / PixelsToUnits;
+            float height = layer.Rect.Height / PixelsToUnits;
+
+            GameObject gameObject = new GameObject(layer.Name);
             gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
             gameObject.transform.parent = currentGroupGameObject.transform;
 
@@ -552,14 +577,14 @@ namespace PsdLayoutTool
             meshRenderer.material = font.material;
 
             TextMesh textMesh = gameObject.AddComponent<TextMesh>();
-            textMesh.text = text;
+            textMesh.text = layer.Text;
             textMesh.font = font;
             textMesh.fontSize = 0;
-            textMesh.characterSize = fontSize / PixelsToUnits;
-            textMesh.color = fillColor;
+            textMesh.characterSize = layer.FontSize / PixelsToUnits;
+            textMesh.color = color;
             textMesh.anchor = TextAnchor.MiddleCenter;
 
-            switch (justification)
+            switch (layer.Justification)
             {
                 case TextJustification.Left:
                     textMesh.alignment = TextAlignment.Left;
@@ -576,18 +601,16 @@ namespace PsdLayoutTool
         /// <summary>
         /// Creates a <see cref="GameObject"/> with a sprite from the given <see cref="Layer"/>
         /// </summary>
-        /// <param name="name">The name of the sprite object to create.</param>
-        /// <param name="rect">The <see cref="Rectangle"/> representing the size of the sprite.</param>
-        /// <param name="sprite">The <see cref="Sprite"/> image to use.</param>
-        private static void CreateSpriteGameObject(string name, Rectangle rect, Sprite sprite)
+        /// <param name="layer">The <see cref="Layer"/> to create the sprite from.</param>
+        private static void CreateSpriteGameObject(Layer layer, Sprite sprite)
         {
-            float x = rect.X / PixelsToUnits;
-            float y = rect.Y / PixelsToUnits;
+            float x = layer.Rect.X / PixelsToUnits;
+            float y = layer.Rect.Y / PixelsToUnits;
             y = (CanvasSize.y / PixelsToUnits) - y;
-            float width = rect.Width / PixelsToUnits;
-            float height = rect.Height / PixelsToUnits;
+            float width = layer.Rect.Width / PixelsToUnits;
+            float height = layer.Rect.Height / PixelsToUnits;
 
-            GameObject gameObject = new GameObject(name);
+            GameObject gameObject = new GameObject(layer.Name);
             gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
             gameObject.transform.parent = currentGroupGameObject.transform;
 
@@ -640,13 +663,12 @@ namespace PsdLayoutTool
         /// <summary>
         /// Creates a Unity UI <see cref="UnityEngine.UI.Image"/> <see cref="GameObject"/> with a <see cref="Sprite"/> from a PSD <see cref="Layer"/>.
         /// </summary>
-        /// <param name="name">The name of the image object to create.</param>
-        /// <param name="rect">The <see cref="Rectangle"/> representing the size of the sprite.</param>
+        /// <param name="layer">The <see cref="Layer"/> to use to create the UI Image.</param>
         /// <param name="sprite">The <see cref="Sprite"/> image to use.</param>
-        private static void CreateUIImage(string name, Rectangle rect, Sprite sprite)
+        private static UnityEngine.UI.Image CreateUIImage(Layer layer, Sprite sprite)
         {
-            float x = rect.X / PixelsToUnits;
-            float y = rect.Y / PixelsToUnits;
+            float x = layer.Rect.X / PixelsToUnits;
+            float y = layer.Rect.Y / PixelsToUnits;
 
             // Photoshop increase Y while going down. Unity increases Y while going up.  So, we need to reverse the Y position.
             y = (CanvasSize.y / PixelsToUnits) - y;
@@ -655,12 +677,15 @@ namespace PsdLayoutTool
             x = x - ((CanvasSize.x / 2) / PixelsToUnits);
             y = y - ((CanvasSize.y / 2) / PixelsToUnits);
 
-            float width = rect.Width / PixelsToUnits;
-            float height = rect.Height / PixelsToUnits;
+            float width = layer.Rect.Width / PixelsToUnits;
+            float height = layer.Rect.Height / PixelsToUnits;
 
-            GameObject gameObject = new GameObject(name);
+            GameObject gameObject = new GameObject(layer.Name);
             gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
             gameObject.transform.parent = currentGroupGameObject.transform;
+
+            // if the current group object actually has a position (not a normal Photoshop folder layer), then offset the position accordingly
+            gameObject.transform.position = new Vector3(gameObject.transform.position.x + currentGroupGameObject.transform.position.x, gameObject.transform.position.y + currentGroupGameObject.transform.position.y, gameObject.transform.position.z);
 
             currentDepth -= depthStep;
 
@@ -669,21 +694,20 @@ namespace PsdLayoutTool
 
             RectTransform transform = gameObject.GetComponent<RectTransform>();
             transform.sizeDelta = new Vector2(width, height);
+
+            return image;
         }
 
         /// <summary>
         /// Creates a Unity UI <see cref="UnityEngine.UI.Text"/> <see cref="GameObject"/> with the text from a PSD <see cref="Layer"/>.
         /// </summary>
-        /// <param name="name">The name of the text object to create.</param>
-        /// <param name="rect">The <see cref="Rectangle"/> representing the size of the text area.</param>
-        /// <param name="text">The actual text in the text area.</param>
-        /// <param name="fontSize">The point size of the font.</param>
-        /// <param name="justification">The justification of the text.</param>
-        /// <param name="fillColor">The color used to fill the text.</param>
-        private static void CreateUIText(string name, Rectangle rect, string text, float fontSize, TextJustification justification, UnityEngine.Color fillColor)
+        /// <param name="layer">The <see cref="Layer"/> used to create the <see cref="UnityEngine.UI.Text"/> from.</param>
+        private static void CreateUIText(Layer layer)
         {
-            float x = rect.X / PixelsToUnits;
-            float y = rect.Y / PixelsToUnits;
+            UnityEngine.Color color = new UnityEngine.Color(layer.FillColor.R, layer.FillColor.G, layer.FillColor.B, layer.FillColor.A);
+
+            float x = layer.Rect.X / PixelsToUnits;
+            float y = layer.Rect.Y / PixelsToUnits;
 
             // Photoshop increase Y while going down. Unity increases Y while going up.  So, we need to reverse the Y position.
             y = (CanvasSize.y / PixelsToUnits) - y;
@@ -691,11 +715,11 @@ namespace PsdLayoutTool
             // Photoshop uses the upper left corner as the pivot (0,0).  Unity defaults to use the center as (0,0), so we must offset the positions.
             x = x - ((CanvasSize.x / 2) / PixelsToUnits);
             y = y - ((CanvasSize.y / 2) / PixelsToUnits);
-            
-            float width = rect.Width / PixelsToUnits;
-            float height = rect.Height / PixelsToUnits;
 
-            GameObject gameObject = new GameObject(name);
+            float width = layer.Rect.Width / PixelsToUnits;
+            float height = layer.Rect.Height / PixelsToUnits;
+
+            GameObject gameObject = new GameObject(layer.Name);
             gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
             gameObject.transform.parent = currentGroupGameObject.transform;
 
@@ -704,13 +728,13 @@ namespace PsdLayoutTool
             UnityEngine.Font font = Resources.GetBuiltinResource<UnityEngine.Font>("Arial.ttf");
 
             Text textUI = gameObject.AddComponent<Text>();
-            textUI.text = text;
+            textUI.text = layer.Text;
             textUI.font = font;
-            textUI.fontSize = Mathf.Max((int)(fontSize / PixelsToUnits), 1);
-            textUI.color = fillColor;
+            textUI.fontSize = Mathf.Max((int)(layer.FontSize / PixelsToUnits), 1);
+            textUI.color = color;
             textUI.alignment = TextAnchor.MiddleCenter;
 
-            switch (justification)
+            switch (layer.Justification)
             {
                 case TextJustification.Left:
                     textUI.alignment = TextAnchor.MiddleLeft;
@@ -729,25 +753,98 @@ namespace PsdLayoutTool
 
         private static void CreateButton(Layer layer)
         {
-            // TODO: Look for a ClipRect and apply it to each sprite
-
+            // create an empty Image object with a Button behavior attached
+            UnityEngine.UI.Image image = CreateUIImage(layer, null);
+            Button button = image.gameObject.AddComponent<Button>();
+            
+            // look through the children for a clip rect
             foreach (Layer child in layer.Children)
             {
-                if (child.Name.ContainsIgnoreCase("|ButtonDisabled"))
+                if (child.Name.ContainsIgnoreCase("|ClipRect"))
                 {
                     
                 }
-                else if (child.Name.ContainsIgnoreCase("|ButtonHighlighted"))
-                {
+            }
 
+            // look through the children for the sprite states
+            foreach (Layer child in layer.Children)
+            {
+                if (child.Name.ContainsIgnoreCase("|Disabled"))
+                {
+                    child.Name = child.Name.ReplaceIgnoreCase("|Disabled", string.Empty);
+                    button.transition = Selectable.Transition.SpriteSwap;
+
+                    SpriteState spriteState = button.spriteState;
+                    spriteState.disabledSprite = CreateSprite(child);
+                    button.spriteState = spriteState;
                 }
-                else if (child.Name.ContainsIgnoreCase("|ButtonPressed"))
+                else if (child.Name.ContainsIgnoreCase("|Highlighted"))
                 {
+                    child.Name = child.Name.ReplaceIgnoreCase("|Highlighted", string.Empty);
+                    button.transition = Selectable.Transition.SpriteSwap;
 
+                    SpriteState spriteState = button.spriteState;
+                    spriteState.highlightedSprite = CreateSprite(child);
+                    button.spriteState = spriteState;
                 }
-                else if (child.Name.ContainsIgnoreCase("|ButtonDefault"))
+                else if (child.Name.ContainsIgnoreCase("|Pressed"))
                 {
+                    child.Name = child.Name.ReplaceIgnoreCase("|Pressed", string.Empty);
+                    button.transition = Selectable.Transition.SpriteSwap;
 
+                    SpriteState spriteState = button.spriteState;
+                    spriteState.pressedSprite = CreateSprite(child);
+                    button.spriteState = spriteState;
+                }
+                else if (child.Name.ContainsIgnoreCase("|Default") ||
+                         child.Name.ContainsIgnoreCase("|Enabled") ||
+                         child.Name.ContainsIgnoreCase("|Normal") ||
+                         child.Name.ContainsIgnoreCase("|Up"))
+                {
+                    child.Name = child.Name.ReplaceIgnoreCase("|Default", string.Empty);
+                    child.Name = child.Name.ReplaceIgnoreCase("|Enabled", string.Empty);
+                    child.Name = child.Name.ReplaceIgnoreCase("|Normal", string.Empty);
+                    child.Name = child.Name.ReplaceIgnoreCase("|Up", string.Empty);
+
+                    //UnityEngine.UI.Image image = buttonObject.AddComponent<UnityEngine.UI.Image>();
+                    image.sprite = CreateSprite(child);
+
+                    float x = child.Rect.X / PixelsToUnits;
+                    float y = child.Rect.Y / PixelsToUnits;
+
+                    // Photoshop increase Y while going down. Unity increases Y while going up.  So, we need to reverse the Y position.
+                    y = (CanvasSize.y / PixelsToUnits) - y;
+
+                    // Photoshop uses the upper left corner as the pivot (0,0).  Unity defaults to use the center as (0,0), so we must offset the positions.
+                    x = x - ((CanvasSize.x / 2) / PixelsToUnits);
+                    y = y - ((CanvasSize.y / 2) / PixelsToUnits);
+
+                    float width = child.Rect.Width / PixelsToUnits;
+                    float height = child.Rect.Height / PixelsToUnits;
+
+                    image.gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+
+                    RectTransform transform = image.gameObject.GetComponent<RectTransform>();
+                    transform.sizeDelta = new Vector2(width, height);
+
+                    button.targetGraphic = image;
+                }
+                else if (child.Name.ContainsIgnoreCase("|Text") && !child.IsTextLayer)
+                {
+                    child.Name = child.Name.ReplaceIgnoreCase("|Text", string.Empty);
+
+                    GameObject oldGroupObject = currentGroupGameObject;
+                    currentGroupGameObject = button.gameObject;
+
+                    // If the "text" is a normal art layer, create an Image object from the "text"
+                    CreateUIImage(child, CreateSprite(child));
+
+                    currentGroupGameObject = oldGroupObject;
+                }
+
+                if (child.IsTextLayer)
+                {
+                    Debug.Log("Button Text!");
                 }
             }
         }
