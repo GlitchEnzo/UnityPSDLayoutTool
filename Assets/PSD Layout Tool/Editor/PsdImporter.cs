@@ -453,15 +453,14 @@
                 if (LayoutInScene || CreatePrefab)
                 {
                     // create a sprite from the layer to lay it out in the scene
-                    Sprite sprite = CreateSprite(layer);
                     if (!UseUnityUI)
                     {
-                        CreateSpriteGameObject(layer, sprite);
+                        CreateSpriteGameObject(layer);
                     }
                     else
                     {
 #if !(UNITY_4_3 || UNITY_4_5)
-                        CreateUIImage(layer, sprite);
+                        CreateUIImage(layer);
 #endif
                     }
                 }
@@ -498,24 +497,29 @@
         /// <returns>The filepath to the created PNG file.</returns>
         private static string CreatePNG(Layer layer)
         {
-            // decode the layer into an image (must be a bitmap so we can set pixels later)
-            Bitmap image = new Bitmap(ImageDecoder.DecodeImage(layer));
+            string file = string.Empty;
 
-            // the image decoder doesn't handle transparency in colors, so we have to do it manually
-            ////if (layer.Opacity != 255)
-            ////{
-            ////    for (int x = 0; x < image.Width; x++)
-            ////    {
-            ////        for (int y = 0; y < image.Height; y++)
-            ////        {
-            ////            System.Drawing.Color color = image.GetPixel(x, y);
-            ////            image.SetPixel(x, y, System.Drawing.Color.FromArgb(layer.Opacity, color));
-            ////        }
-            ////    }
-            ////}
+            if (layer.Children.Count == 0 && layer.Rect.Width > 0)
+            {
+                // decode the layer into an image (must be a bitmap so we can set pixels later)
+                Bitmap image = new Bitmap(ImageDecoder.DecodeImage(layer));
 
-            string file = Path.Combine(currentPath, layer.Name + ".png");
-            image.Save(file, ImageFormat.Png);
+                // the image decoder doesn't handle transparency in colors, so we have to do it manually
+                ////if (layer.Opacity != 255)
+                ////{
+                ////    for (int x = 0; x < image.Width; x++)
+                ////    {
+                ////        for (int y = 0; y < image.Height; y++)
+                ////        {
+                ////            System.Drawing.Color color = image.GetPixel(x, y);
+                ////            image.SetPixel(x, y, System.Drawing.Color.FromArgb(layer.Opacity, color));
+                ////        }
+                ////    }
+                ////}
+
+                file = Path.Combine(currentPath, layer.Name + ".png");
+                image.Save(file, ImageFormat.Png);
+            }
 
             return file;
         }
@@ -527,8 +531,15 @@
         /// <returns>The created <see cref="Sprite"/> object.</returns>
         private static Sprite CreateSprite(Layer layer)
         {
-            string file = CreatePNG(layer);
-            return ImportSprite(GetRelativePath(file));
+            Sprite sprite = null;
+
+            if (layer.Children.Count == 0 && layer.Rect.Width > 0)
+            {
+                string file = CreatePNG(layer);
+                sprite = ImportSprite(GetRelativePath(file));
+            }
+
+            return sprite;
         }
 
         /// <summary>
@@ -616,8 +627,7 @@
         /// Creates a <see cref="GameObject"/> with a sprite from the given <see cref="Layer"/>
         /// </summary>
         /// <param name="layer">The <see cref="Layer"/> to create the sprite from.</param>
-        /// <param name="sprite">The Sprite object to use to create the GameObject.</param>
-        private static void CreateSpriteGameObject(Layer layer, Sprite sprite)
+        private static void CreateSpriteGameObject(Layer layer)
         {
             float x = layer.Rect.X / PixelsToUnits;
             float y = layer.Rect.Y / PixelsToUnits;
@@ -632,7 +642,7 @@
             currentDepth -= depthStep;
 
             SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
-            spriteRenderer.sprite = sprite;
+            spriteRenderer.sprite = CreateSprite(layer);
         }
 
         #endregion
@@ -679,9 +689,8 @@
         /// Creates a Unity UI <see cref="UnityEngine.UI.Image"/> <see cref="GameObject"/> with a <see cref="Sprite"/> from a PSD <see cref="Layer"/>.
         /// </summary>
         /// <param name="layer">The <see cref="Layer"/> to use to create the UI Image.</param>
-        /// <param name="sprite">The <see cref="Sprite"/> image to use.</param>
         /// <returns>The newly constructed Image object.</returns>
-        private static UnityEngine.UI.Image CreateUIImage(Layer layer, Sprite sprite)
+        private static UnityEngine.UI.Image CreateUIImage(Layer layer)
         {
             float x = layer.Rect.X / PixelsToUnits;
             float y = layer.Rect.Y / PixelsToUnits;
@@ -706,7 +715,7 @@
             currentDepth -= depthStep;
 
             UnityEngine.UI.Image image = gameObject.AddComponent<UnityEngine.UI.Image>();
-            image.sprite = sprite;
+            image.sprite = CreateSprite(layer);
 
             RectTransform transform = gameObject.GetComponent<RectTransform>();
             transform.sizeDelta = new Vector2(width, height);
@@ -787,7 +796,7 @@
         private static void CreateButton(Layer layer)
         {
             // create an empty Image object with a Button behavior attached
-            UnityEngine.UI.Image image = CreateUIImage(layer, null);
+            UnityEngine.UI.Image image = CreateUIImage(layer);
             Button button = image.gameObject.AddComponent<Button>();
 
             // look through the children for a clip rect
@@ -870,7 +879,7 @@
                     currentGroupGameObject = button.gameObject;
 
                     // If the "text" is a normal art layer, create an Image object from the "text"
-                    CreateUIImage(child, CreateSprite(child));
+                    CreateUIImage(child);
 
                     currentGroupGameObject = oldGroupObject;
                 }
