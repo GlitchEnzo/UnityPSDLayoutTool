@@ -230,7 +230,7 @@
         }
 
         /// <summary>
-        /// Gets the name of the layer.
+        /// Gets or sets the name of the layer.
         /// </summary>
         public string Name { get; set; }
 

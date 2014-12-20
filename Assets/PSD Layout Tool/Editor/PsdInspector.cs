@@ -37,16 +37,16 @@
             Type type = Type.GetType("UnityEditor.TextureImporterInspector, UnityEditor");
             nativeEditor = CreateEditor(target, type);
 
-			// set up the GUI style for the section headers
+            // set up the GUI style for the section headers
             guiStyle = new GUIStyle();
             guiStyle.richText = true;
             guiStyle.fontSize = 14;
-			guiStyle.normal.textColor = Color.black;
+            guiStyle.normal.textColor = Color.black;
 
-			if (Application.HasProLicense())
-			{
-            	guiStyle.normal.textColor = Color.white;
-			}
+            if (Application.HasProLicense())
+            {
+                guiStyle.normal.textColor = Color.white;
+            }
         }
 
         /// <summary>
@@ -71,9 +71,9 @@
                     PsdImporter.PixelsToUnits = EditorGUILayout.FloatField(pixelsToUnitsLabel, PsdImporter.PixelsToUnits);
 
 #if !(UNITY_4_3 || UNITY_4_5)
-					// if we are using Unity 4.6 or higher, allow using Unity UI
-					GUIContent useUnityUILabel = new GUIContent("Use Unity 4.6+ UI", "Create Unity 4.6+ UI elements or pre-4.6 GameObjects.");
-					PsdImporter.UseUnityUI = EditorGUILayout.Toggle(useUnityUILabel, PsdImporter.UseUnityUI);
+                    // if we are using Unity 4.6 or higher, allow using Unity UI
+                    GUIContent useUnityUILabel = new GUIContent("Use Unity 4.6+ UI", "Create Unity 4.6+ UI elements or pre-4.6 GameObjects.");
+                    PsdImporter.UseUnityUI = EditorGUILayout.Toggle(useUnityUILabel, PsdImporter.UseUnityUI);
 #endif
 
                     // draw our custom buttons for PSD files
@@ -103,7 +103,7 @@
                     // draw the default Inspector for the PSD
                     nativeEditor.OnInspectorGUI();
                 }
-                else 
+                else
                 {
                     // It is a "normal" Texture, not a PSD
                     nativeEditor.OnInspectorGUI();

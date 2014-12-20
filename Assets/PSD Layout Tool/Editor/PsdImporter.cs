@@ -1,12 +1,11 @@
-﻿using System;
-using System.Text;
-
-namespace PsdLayoutTool
+﻿namespace PsdLayoutTool
 {
+    using System;
     using System.Collections.Generic;
     using System.Drawing;
     using System.Drawing.Imaging;
     using System.IO;
+    using System.Text;
     using System.Text.RegularExpressions;
     using PhotoshopFile;
     using UnityEditor;
@@ -175,6 +174,7 @@ namespace PsdLayoutTool
                 {
                     rootPsdGameObject = new GameObject(PsdName);
                 }
+
                 currentGroupGameObject = rootPsdGameObject;
 #endif
             }
@@ -184,13 +184,13 @@ namespace PsdLayoutTool
 
             if (CreatePrefab)
             {
-                Object prefab = PrefabUtility.CreateEmptyPrefab(asset.Replace(".psd", ".prefab"));
+                UnityEngine.Object prefab = PrefabUtility.CreateEmptyPrefab(asset.Replace(".psd", ".prefab"));
                 PrefabUtility.ReplacePrefab(rootPsdGameObject, prefab);
 
                 if (!LayoutInScene)
                 {
                     // if we are not flagged to layout in the scene, delete the GameObject used to generate the prefab
-                    Object.DestroyImmediate(rootPsdGameObject);
+                    UnityEngine.Object.DestroyImmediate(rootPsdGameObject);
                 }
             }
 
@@ -403,11 +403,24 @@ namespace PsdLayoutTool
             }
         }
 
+        /// <summary>
+        /// Checks if the string contains the given string, while ignoring any casing.
+        /// </summary>
+        /// <param name="source">The source string to check.</param>
+        /// <param name="toCheck">The string to search for in the source string.</param>
+        /// <returns>True if the string contains the search string, otherwise false.</returns>
         private static bool ContainsIgnoreCase(this string source, string toCheck)
         {
             return source.IndexOf(toCheck, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
+        /// <summary>
+        /// Replaces any instance of the given string in this string with the given string.
+        /// </summary>
+        /// <param name="str">The string to replace sections in.</param>
+        /// <param name="oldValue">The string to search for.</param>
+        /// <param name="newValue">The string to replace the search string with.</param>
+        /// <returns>The replaced string.</returns>
         private static string ReplaceIgnoreCase(this string str, string oldValue, string newValue)
         {
             StringBuilder sb = new StringBuilder();
@@ -423,6 +436,7 @@ namespace PsdLayoutTool
                 previousIndex = index;
                 index = str.IndexOf(oldValue, index, StringComparison.OrdinalIgnoreCase);
             }
+
             sb.Append(str.Substring(previousIndex));
 
             return sb.ToString();
@@ -602,6 +616,7 @@ namespace PsdLayoutTool
         /// Creates a <see cref="GameObject"/> with a sprite from the given <see cref="Layer"/>
         /// </summary>
         /// <param name="layer">The <see cref="Layer"/> to create the sprite from.</param>
+        /// <param name="sprite">The Sprite object to use to create the GameObject.</param>
         private static void CreateSpriteGameObject(Layer layer, Sprite sprite)
         {
             float x = layer.Rect.X / PixelsToUnits;
@@ -665,6 +680,7 @@ namespace PsdLayoutTool
         /// </summary>
         /// <param name="layer">The <see cref="Layer"/> to use to create the UI Image.</param>
         /// <param name="sprite">The <see cref="Sprite"/> image to use.</param>
+        /// <returns>The newly constructed Image object.</returns>
         private static UnityEngine.UI.Image CreateUIImage(Layer layer, Sprite sprite)
         {
             float x = layer.Rect.X / PixelsToUnits;
@@ -730,7 +746,23 @@ namespace PsdLayoutTool
             Text textUI = gameObject.AddComponent<Text>();
             textUI.text = layer.Text;
             textUI.font = font;
-            textUI.fontSize = Mathf.Max((int)(layer.FontSize / PixelsToUnits), 1);
+            textUI.rectTransform.sizeDelta = new Vector2(width, height);
+
+            float fontSize = layer.FontSize / PixelsToUnits;
+            float ceiling = Mathf.Ceil(fontSize);
+            if (fontSize < ceiling)
+            {
+                // Unity UI Text doesn't support floating point font sizes, so we have to round to the next size and scale everything else
+                float scaleFactor = ceiling / fontSize;
+                textUI.fontSize = (int)ceiling;
+                textUI.rectTransform.sizeDelta *= scaleFactor;
+                textUI.rectTransform.localScale /= scaleFactor;
+            }
+            else
+            {
+                textUI.fontSize = (int)fontSize;
+            }
+
             textUI.color = color;
             textUI.alignment = TextAnchor.MiddleCenter;
 
@@ -746,23 +778,25 @@ namespace PsdLayoutTool
                     textUI.alignment = TextAnchor.MiddleCenter;
                     break;
             }
-
-            RectTransform transform = gameObject.GetComponent<RectTransform>();
-            transform.sizeDelta = new Vector2(width, height);
         }
 
+        /// <summary>
+        /// Creates a <see cref="UnityEngine.UI.Button"/> from the given <see cref="Layer"/>.
+        /// </summary>
+        /// <param name="layer">The Layer to create the Button from.</param>
         private static void CreateButton(Layer layer)
         {
             // create an empty Image object with a Button behavior attached
             UnityEngine.UI.Image image = CreateUIImage(layer, null);
             Button button = image.gameObject.AddComponent<Button>();
-            
+
             // look through the children for a clip rect
+            Rectangle clipRect;
             foreach (Layer child in layer.Children)
             {
                 if (child.Name.ContainsIgnoreCase("|ClipRect"))
                 {
-                    
+                    clipRect = child.Rect;
                 }
             }
 
@@ -806,7 +840,6 @@ namespace PsdLayoutTool
                     child.Name = child.Name.ReplaceIgnoreCase("|Normal", string.Empty);
                     child.Name = child.Name.ReplaceIgnoreCase("|Up", string.Empty);
 
-                    //UnityEngine.UI.Image image = buttonObject.AddComponent<UnityEngine.UI.Image>();
                     image.sprite = CreateSprite(child);
 
                     float x = child.Rect.X / PixelsToUnits;
