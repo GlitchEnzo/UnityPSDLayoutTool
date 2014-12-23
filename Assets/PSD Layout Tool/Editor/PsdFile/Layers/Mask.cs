@@ -66,17 +66,26 @@
         /// <summary>
         /// Gets the rectangle enclosing the mask.
         /// </summary>
-        public Rectangle Rect { get { return rect; } }
+        public Rectangle Rect
+        {
+            get { return rect; }
+        }
 
         /// <summary>
         /// Gets a value indicating whether the position of the mask is relative to the layer or not.
         /// </summary>
-        public bool PositionIsRelative { get { return flags[PositionIsRelativeBit]; } }
+        public bool PositionIsRelative
+        {
+            get { return flags[PositionIsRelativeBit]; }
+        }
 
         /// <summary>
         /// Gets the raw image data from the channel.
         /// </summary>
-        public byte[] ImageData { get; private set; }
+        public byte[] ImageData
+        {
+            get; private set;
+        }
 
         /// <summary>
         /// Gets or sets the default color of the mask

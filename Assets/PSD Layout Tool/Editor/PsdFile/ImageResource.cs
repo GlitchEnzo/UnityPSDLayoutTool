@@ -66,7 +66,10 @@
         /// <summary>
         /// Gets a <see cref="BinaryReverseReader"/> that reads the internal <see cref="Data"/>.
         /// </summary>
-        public BinaryReverseReader DataReader { get { return new BinaryReverseReader(new MemoryStream(Data)); } }
+        public BinaryReverseReader DataReader
+        {
+            get { return new BinaryReverseReader(new MemoryStream(Data)); }
+        }
 
         /// <summary>
         /// Gets or sets the name of this resource.

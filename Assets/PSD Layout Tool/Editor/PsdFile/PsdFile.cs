@@ -67,17 +67,26 @@
         /// <summary>
         /// Gets the height of the image in pixels.
         /// </summary>
-        public int Height { get { return height; } }
+        public int Height
+        {
+            get { return height; }
+        }
 
         /// <summary>
         /// Gets the width of the image in pixels.
         /// </summary>
-        public int Width { get { return width; } }
+        public int Width
+        {
+            get { return width; }
+        }
 
         /// <summary>
         /// Gets the number of bits per channel. Supported values are 1, 8, and 16.
         /// </summary>
-        public int Depth { get { return depth; } }
+        public int Depth
+        {
+            get { return depth; }
+        }
 
         /// <summary>
         /// Gets the color mode of the file.

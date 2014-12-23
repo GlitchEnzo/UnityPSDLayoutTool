@@ -1,7 +1,6 @@
 ﻿namespace PsdLayoutTool
 {
     using System;
-    using System.Reflection;
     using UnityEditor;
     using UnityEngine;
 
@@ -70,11 +69,8 @@
                     GUIContent pixelsToUnitsLabel = new GUIContent("Pixels to Unity Units", "The scale of the Sprite objects, in the number of pixels to Unity world units.");
                     PsdImporter.PixelsToUnits = EditorGUILayout.FloatField(pixelsToUnitsLabel, PsdImporter.PixelsToUnits);
 
-#if !(UNITY_4_3 || UNITY_4_5)
-                    // if we are using Unity 4.6 or higher, allow using Unity UI
-                    GUIContent useUnityUILabel = new GUIContent("Use Unity 4.6+ UI", "Create Unity 4.6+ UI elements or pre-4.6 GameObjects.");
+                    GUIContent useUnityUILabel = new GUIContent("Use Unity UI", "Create Unity UI elements instead of \"normal\" GameObjects.");
                     PsdImporter.UseUnityUI = EditorGUILayout.Toggle(useUnityUILabel, PsdImporter.UseUnityUI);
-#endif
 
                     // draw our custom buttons for PSD files
                     if (GUILayout.Button("Export Layers as Textures"))

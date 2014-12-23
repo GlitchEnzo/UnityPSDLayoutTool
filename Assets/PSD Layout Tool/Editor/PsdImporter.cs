@@ -10,12 +10,8 @@
     using PhotoshopFile;
     using UnityEditor;
     using UnityEngine;
-
-#if !(UNITY_4_3 || UNITY_4_5)
-    // if we are using Unity 4.6 or higher, allow using Unity UI
     using UnityEngine.EventSystems;
     using UnityEngine.UI;
-#endif
 
     /// <summary>
     /// Handles all of the importing for a PSD file (exporting textures, creating prefabs, etc).
@@ -160,10 +156,6 @@
 
             if (LayoutInScene || CreatePrefab)
             {
-#if UNITY_4_3 || UNITY_4_5
-				rootPsdGameObject = new GameObject(PsdName);
-				currentGroupGameObject = rootPsdGameObject;
-#else // Unity 4.6+
                 if (UseUnityUI)
                 {
                     CreateUIEventSystem();
@@ -176,7 +168,6 @@
                 }
 
                 currentGroupGameObject = rootPsdGameObject;
-#endif
             }
 
             List<Layer> tree = BuildLayerTree(psd.Layers);
@@ -375,12 +366,10 @@
             if (layer.Name.ContainsIgnoreCase("|Button"))
             {
                 layer.Name = layer.Name.ReplaceIgnoreCase("|Button", string.Empty);
-#if !(UNITY_4_3 || UNITY_4_5)
                 if (UseUnityUI)
                 {
                     CreateButton(layer);
                 }
-#endif
             }
             else
             {
@@ -459,9 +448,7 @@
                     }
                     else
                     {
-#if !(UNITY_4_3 || UNITY_4_5)
                         CreateUIImage(layer);
-#endif
                     }
                 }
                 else
@@ -482,9 +469,7 @@
                     }
                     else
                     {
-#if !(UNITY_4_3 || UNITY_4_5)
                         CreateUIText(layer);
-#endif
                     }
                 }
             }
@@ -560,13 +545,7 @@
                 textureImporter.spriteImportMode = SpriteImportMode.Single;
                 textureImporter.spritePivot = new Vector2(0.5f, 0.5f);
                 textureImporter.maxTextureSize = 2048;
-
-#if UNITY_4_3 || UNITY_4_5
-                textureImporter.spritePixelsToUnits = PixelsToUnits;
-#else // Unity 4.6+
                 textureImporter.spritePixelsPerUnit = PixelsToUnits;
-#endif
-
                 textureImporter.spritePackingTag = PsdName;
             }
 
@@ -647,9 +626,7 @@
 
         #endregion
 
-        #region Unity 4.6+ UI
-        // only allow Unity UI creation in Unity 4.6 or higher
-#if !(UNITY_4_3 || UNITY_4_5)
+        #region Unity UI
         /// <summary>
         /// Creates the Unity UI event system game object that handles all input.
         /// </summary>
@@ -800,7 +777,7 @@
             Button button = image.gameObject.AddComponent<Button>();
 
             // look through the children for a clip rect
-            Rectangle clipRect;
+            Rectangle? clipRect = null;
             foreach (Layer child in layer.Children)
             {
                 if (child.Name.ContainsIgnoreCase("|ClipRect"))
@@ -890,7 +867,6 @@
                 }
             }
         }
-#endif
         #endregion
     }
 }
