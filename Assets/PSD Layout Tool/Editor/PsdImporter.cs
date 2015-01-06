@@ -5,10 +5,12 @@
     using System.Drawing;
     using System.Drawing.Imaging;
     using System.IO;
+    using System.Linq;
     using System.Text;
     using System.Text.RegularExpressions;
     using PhotoshopFile;
     using UnityEditor;
+    using UnityEditorInternal;
     using UnityEngine;
     using UnityEngine.EventSystems;
     using UnityEngine.UI;
@@ -366,13 +368,41 @@
             if (layer.Name.ContainsIgnoreCase("|Button"))
             {
                 layer.Name = layer.Name.ReplaceIgnoreCase("|Button", string.Empty);
+
                 if (UseUnityUI)
                 {
-                    CreateButton(layer);
+                    CreateUIButton(layer);
                 }
+                else
+                {
+                    ////CreateGUIButton(layer);
+                }
+            }
+            else if (layer.Name.ContainsIgnoreCase("|Animation"))
+            {
+                layer.Name = layer.Name.ReplaceIgnoreCase("|Animation", string.Empty);
+
+                string oldPath = currentPath;
+                GameObject oldGroupObject = currentGroupGameObject;
+
+                currentPath = Path.Combine(currentPath, layer.Name.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries)[0]);
+                Directory.CreateDirectory(currentPath);
+
+                if (UseUnityUI)
+                {
+                    ////CreateUIAnimation(layer);
+                }
+                else
+                {
+                    CreateAnimation(layer);
+                }
+
+                currentPath = oldPath;
+                currentGroupGameObject = oldGroupObject;
             }
             else
             {
+                // it is a "normal" folder layer that contains children layers
                 string oldPath = currentPath;
                 GameObject oldGroupObject = currentGroupGameObject;
 
@@ -516,23 +546,35 @@
         /// <returns>The created <see cref="Sprite"/> object.</returns>
         private static Sprite CreateSprite(Layer layer)
         {
+            return CreateSprite(layer, PsdName);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="Sprite"/> from the given <see cref="Layer"/>.
+        /// </summary>
+        /// <param name="layer">The <see cref="Layer"/> to use to create a <see cref="Sprite"/>.</param>
+        /// <param name="packingTag">The tag used for Unity's atlas packer.</param>
+        /// <returns>The created <see cref="Sprite"/> object.</returns>
+        private static Sprite CreateSprite(Layer layer, string packingTag)
+        {
             Sprite sprite = null;
 
             if (layer.Children.Count == 0 && layer.Rect.Width > 0)
             {
                 string file = CreatePNG(layer);
-                sprite = ImportSprite(GetRelativePath(file));
+                sprite = ImportSprite(GetRelativePath(file), packingTag);
             }
 
             return sprite;
         }
 
         /// <summary>
-        /// Imports the <see cref="Sprite"/> at the given path, relative to the Unity project "Assets/Textures/texture.tga".
+        /// Imports the <see cref="Sprite"/> at the given path, relative to the Unity project. For example "Assets/Textures/texture.png".
         /// </summary>
-        /// <param name="relativePathToSprite">The path to the sprite, relative to the Unity project "Assets/Textures/texture.tga".</param>
+        /// <param name="relativePathToSprite">The path to the sprite, relative to the Unity project "Assets/Textures/texture.png".</param>
+        /// <param name="packingTag">The tag to use for Unity's atlas packing.</param>
         /// <returns>The imported image as a <see cref="Sprite"/> object.</returns>
-        private static Sprite ImportSprite(string relativePathToSprite)
+        private static Sprite ImportSprite(string relativePathToSprite, string packingTag)
         {
             AssetDatabase.ImportAsset(relativePathToSprite, ImportAssetOptions.ForceUpdate);
 
@@ -546,7 +588,7 @@
                 textureImporter.spritePivot = new Vector2(0.5f, 0.5f);
                 textureImporter.maxTextureSize = 2048;
                 textureImporter.spritePixelsPerUnit = PixelsToUnits;
-                textureImporter.spritePackingTag = PsdName;
+                textureImporter.spritePackingTag = packingTag;
             }
 
             AssetDatabase.ImportAsset(relativePathToSprite, ImportAssetOptions.ForceUpdate);
@@ -606,7 +648,8 @@
         /// Creates a <see cref="GameObject"/> with a sprite from the given <see cref="Layer"/>
         /// </summary>
         /// <param name="layer">The <see cref="Layer"/> to create the sprite from.</param>
-        private static void CreateSpriteGameObject(Layer layer)
+        /// <returns>The <see cref="SpriteRenderer"/> component attached to the new sprite <see cref="GameObject"/>.</returns>
+        private static SpriteRenderer CreateSpriteGameObject(Layer layer)
         {
             float x = layer.Rect.X / PixelsToUnits;
             float y = layer.Rect.Y / PixelsToUnits;
@@ -622,6 +665,104 @@
 
             SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = CreateSprite(layer);
+            return spriteRenderer;
+        }
+
+        /// <summary>
+        /// Creates a Unity sprite animation from the given <see cref="Layer"/> that is a group layer.  It grabs all of the children art
+        /// layers and uses them as the frames of the animation.
+        /// </summary>
+        /// <param name="layer">The group <see cref="Layer"/> to use to create the sprite animation.</param>
+        private static void CreateAnimation(Layer layer)
+        {
+            float fps = 30;
+
+            string[] args = layer.Name.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string arg in args)
+            {
+                if (arg.ContainsIgnoreCase("FPS="))
+                {
+                    layer.Name = layer.Name.Replace("|" + arg, string.Empty);
+
+                    string[] fpsArgs = arg.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!float.TryParse(fpsArgs[1], out fps))
+                    {
+                        Debug.LogError(string.Format("Unable to parse FPS: \"{0}\"", arg));
+                    }
+                }
+            }
+
+            List<Sprite> frames = new List<Sprite>();
+
+            Layer firstChild = layer.Children.First();
+            SpriteRenderer spriteRenderer = CreateSpriteGameObject(firstChild);
+            spriteRenderer.name = layer.Name;
+
+            foreach (Layer child in layer.Children)
+            {
+                frames.Add(CreateSprite(child, layer.Name));
+            }
+
+            spriteRenderer.sprite = frames[0];
+
+            // Create Animator Controller with an Animation Clip
+            AnimatorController controller = new AnimatorController();
+            AnimatorControllerLayer controllerLayer = controller.AddLayer("Base Layer");
+            State state = controllerLayer.stateMachine.AddState(layer.Name);
+            state.SetAnimationClip(CreateSpriteAnimationClip(layer.Name, frames, fps));
+            AssetDatabase.CreateAsset(controller, GetRelativePath(currentPath) + "/" + layer.Name + ".controller");
+
+            // Add an Animator and assign it the controller
+            Animator animator = spriteRenderer.gameObject.AddComponent<Animator>();
+            animator.runtimeAnimatorController = controller;
+        }
+
+        /// <summary>
+        /// Creates an <see cref="AnimationClip"/> of a sprite animation using the given <see cref="Sprite"/> frames and frames per second.
+        /// </summary>
+        /// <param name="name">The name of the animation to create.</param>
+        /// <param name="sprites">The list of <see cref="Sprite"/> objects making up the frames of the animation.</param>
+        /// <param name="fps">The frames per second for the animation.</param>
+        /// <returns>The newly constructed <see cref="AnimationClip"/></returns>
+        private static AnimationClip CreateSpriteAnimationClip(string name, IList<Sprite> sprites, float fps)
+        {
+            float frameLength = 1f / fps;
+
+            AnimationClip clip = new AnimationClip();
+            clip.name = name;
+            clip.frameRate = fps;
+            clip.wrapMode = WrapMode.Loop;
+
+            // The AnimationClipSettings cannot be set in Unity (as of 4.6) and must be editted via SerializedProperty
+            // from: http://forum.unity3d.com/threads/can-mecanim-animation-clip-properties-be-edited-in-script.251772/
+            SerializedObject serializedClip = new SerializedObject(clip);
+            SerializedProperty serializedSettings = serializedClip.FindProperty("m_AnimationClipSettings");
+            serializedSettings.FindPropertyRelative("m_LoopTime").boolValue = true;
+            serializedClip.ApplyModifiedProperties();
+
+            EditorCurveBinding curveBinding = new EditorCurveBinding();
+            curveBinding.type = typeof(SpriteRenderer);
+            curveBinding.propertyName = "m_Sprite";
+
+            ObjectReferenceKeyframe[] keyFrames = new ObjectReferenceKeyframe[sprites.Count];
+
+            for (int i = 0; i < sprites.Count; i++)
+            {
+                ObjectReferenceKeyframe kf = new ObjectReferenceKeyframe();
+                kf.time = i * frameLength;
+                kf.value = sprites[i];
+                keyFrames[i] = kf;
+            }
+
+            AnimationUtility.SetAnimationType(clip, ModelImporterAnimationType.Generic);
+            AnimationUtility.SetObjectReferenceCurve(clip, curveBinding, keyFrames);
+
+            clip.ValidateIfRetargetable(true);
+
+            AssetDatabase.CreateAsset(clip, GetRelativePath(currentPath) + "/" + name + ".anim");
+
+            return clip;
         }
 
         #endregion
@@ -770,7 +911,7 @@
         /// Creates a <see cref="UnityEngine.UI.Button"/> from the given <see cref="Layer"/>.
         /// </summary>
         /// <param name="layer">The Layer to create the Button from.</param>
-        private static void CreateButton(Layer layer)
+        private static void CreateUIButton(Layer layer)
         {
             // create an empty Image object with a Button behavior attached
             UnityEngine.UI.Image image = CreateUIImage(layer);
@@ -863,7 +1004,7 @@
 
                 if (child.IsTextLayer)
                 {
-                    Debug.Log("Button Text!");
+                    // TODO: Create a child text game object
                 }
             }
         }
