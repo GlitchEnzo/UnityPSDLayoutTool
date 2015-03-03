@@ -16,16 +16,6 @@
         AlphaChannelNames = 1006,
 
         /// <summary>
-        /// A thumbnail resource.
-        /// </summary>
-        Thumbnail1 = 1033,
-
-        /// <summary>
-        /// A thumbnail resource.
-        /// </summary>
-        Thumbnail2 = 1036,
-
-        /// <summary>
         /// XML resource data.
         /// </summary>
         XMLInfo = 1060

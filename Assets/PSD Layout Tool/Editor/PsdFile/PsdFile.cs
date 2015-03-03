@@ -196,11 +196,6 @@
                 ImageResource imgRes = new ImageResource(reader);
                 switch ((ResourceIDs)imgRes.ID)
                 {
-                    case ResourceIDs.Thumbnail2:
-                    case ResourceIDs.Thumbnail1:
-                        imgRes = new Thumbnail(imgRes);
-                        break;
-
                     case ResourceIDs.XMLInfo:
                         MetaData = XDocument.Load(XmlReader.Create(new MemoryStream(imgRes.Data)));
                         IEnumerable<XElement> source = MetaData.Descendants(XName.Get("Category", "http://ns.adobe.com/photoshop/1.0/"));
