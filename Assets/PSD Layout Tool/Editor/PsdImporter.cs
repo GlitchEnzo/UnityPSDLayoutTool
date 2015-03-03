@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.Drawing;
-    using System.Drawing.Imaging;
     using System.IO;
     using System.Linq;
     using System.Text;
@@ -516,24 +515,12 @@
 
             if (layer.Children.Count == 0 && layer.Rect.Width > 0)
             {
-                // decode the layer into an image (must be a bitmap so we can set pixels later)
-                Bitmap image = new Bitmap(ImageDecoder.DecodeImage(layer));
-
-                // the image decoder doesn't handle transparency in colors, so we have to do it manually
-                ////if (layer.Opacity != 255)
-                ////{
-                ////    for (int x = 0; x < image.Width; x++)
-                ////    {
-                ////        for (int y = 0; y < image.Height; y++)
-                ////        {
-                ////            System.Drawing.Color color = image.GetPixel(x, y);
-                ////            image.SetPixel(x, y, System.Drawing.Color.FromArgb(layer.Opacity, color));
-                ////        }
-                ////    }
-                ////}
+                // decode the layer into a texture
+                Texture2D texture = ImageDecoder.DecodeImage(layer);
 
                 file = Path.Combine(currentPath, layer.Name + ".png");
-                image.Save(file, ImageFormat.Png);
+
+                File.WriteAllBytes(file, texture.EncodeToPNG());
             }
 
             return file;

@@ -1,8 +1,7 @@
 ﻿namespace PhotoshopFile
 {
     using System;
-    using System.Drawing;
-    using System.Drawing.Imaging;
+    using UnityEngine;
 
     /// <summary>
     /// Used to decode an image from a PSD layer.
@@ -10,85 +9,85 @@
     public static class ImageDecoder
     {
         /// <summary>
-        /// Decodes a <see cref="Layer"/> into a <see cref="Bitmap"/>.
+        /// Decodes a <see cref="Layer"/> into a <see cref="Texture2D"/>.
         /// </summary>
         /// <param name="layer">The <see cref="Layer"/> to decode.</param>
-        /// <returns>The <see cref="Bitmap"/> decoded from the layer.</returns>
-        public static unsafe Bitmap DecodeImage(Layer layer)
+        /// <returns>The <see cref="Texture2D"/> decoded from the layer.</returns>
+        public static Texture2D DecodeImage(Layer layer)
         {
             if (layer.Rect.Width == 0 || layer.Rect.Height == 0)
             {
                 return null;
             }
 
-            Bitmap bitmap = new Bitmap(layer.Rect.Width, layer.Rect.Height, PixelFormat.Format32bppArgb);
-            Rectangle rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
-            BitmapData bitmapdata = bitmap.LockBits(rect, ImageLockMode.ReadWrite, bitmap.PixelFormat);
-            byte* numPtr = (byte*)bitmapdata.Scan0.ToPointer();
+            Texture2D texture = new Texture2D(layer.Rect.Width, layer.Rect.Height, TextureFormat.ARGB32, false);
+
+            Color32[] colors = new Color32[layer.Rect.Width * layer.Rect.Height];
+
             for (int y = 0; y < layer.Rect.Height; ++y)
             {
-                int num = y * layer.Rect.Width;
-                PixelData* pixelDataPtr = (PixelData*)numPtr;
+                int layerRow = y * layer.Rect.Width;
+
+                // we need to reverse the Y position for the Unity texture
+                int textureRow = (layer.Rect.Height - 1 - y) * layer.Rect.Width;
+
                 for (int x = 0; x < layer.Rect.Width; ++x)
                 {
-                    int pos = num + x;
-                    Color baseColor = GetColor(layer, pos);
+                    int layerPosition = layerRow + x;
+                    int texturePosition = textureRow + x;
+
+                    colors[texturePosition] = GetColor(layer, layerPosition);
+
+                    // set the alpha
                     if (layer.SortedChannels.ContainsKey(-2))
                     {
-                        int color = GetColor(layer.MaskData, x, y);
-                        baseColor = Color.FromArgb(baseColor.A * color / byte.MaxValue, baseColor);
+                        byte color = GetColor(layer.MaskData, x, y);
+                        colors[texturePosition].a = (byte)(colors[texturePosition].a * color);
                     }
-
-                    pixelDataPtr->Alpha = baseColor.A;
-                    pixelDataPtr->Red = baseColor.R;
-                    pixelDataPtr->Green = baseColor.G;
-                    pixelDataPtr->Blue = baseColor.B;
-                    ++pixelDataPtr;
                 }
-
-                numPtr += bitmapdata.Stride;
             }
 
-            bitmap.UnlockBits(bitmapdata);
-            return bitmap;
+            texture.SetPixels32(colors);
+            return texture;
         }
 
         /// <summary>
         /// Gets the color at the given position in the given <see cref="Layer"/>.
         /// </summary>
         /// <param name="layer">The <see cref="Layer"/> to sample.</param>
-        /// <param name="pos">The position to sample.</param>
+        /// <param name="position">The position to sample.</param>
         /// <returns>The sampled color.</returns>
-        private static Color GetColor(Layer layer, int pos)
+        private static Color32 GetColor(Layer layer, int position)
         {
-            Color baseColor = Color.White;
+            Color32 baseColor = new Color32(1, 1, 1, 1);
             switch (layer.PsdFile.ColorMode)
             {
                 case ColorModes.Grayscale:
                 case ColorModes.Duotone:
-                    baseColor = Color.FromArgb(layer.SortedChannels[0].ImageData[pos], layer.SortedChannels[0].ImageData[pos], layer.SortedChannels[0].ImageData[pos]);
+                    baseColor = new Color32(layer.SortedChannels[0].ImageData[position], layer.SortedChannels[0].ImageData[position], layer.SortedChannels[0].ImageData[position], 1);
                     break;
                 case ColorModes.Indexed:
-                    int index = layer.SortedChannels[0].ImageData[pos];
-                    baseColor = Color.FromArgb(layer.PsdFile.ColorModeData[index], layer.PsdFile.ColorModeData[index + 256], layer.PsdFile.ColorModeData[index + 512]);
+                    int index = layer.SortedChannels[0].ImageData[position];
+                    baseColor = new Color32(layer.PsdFile.ColorModeData[index], layer.PsdFile.ColorModeData[index + 256], layer.PsdFile.ColorModeData[index + 512], 1);
                     break;
                 case ColorModes.RGB:
-                    baseColor = Color.FromArgb(layer.SortedChannels[0].ImageData[pos], layer.SortedChannels[1].ImageData[pos], layer.SortedChannels[2].ImageData[pos]);
+                    baseColor = new Color32(layer.SortedChannels[0].ImageData[position], layer.SortedChannels[1].ImageData[position], layer.SortedChannels[2].ImageData[position], 1);
                     break;
                 case ColorModes.CMYK:
-                    baseColor = CMYKToRGB(layer.SortedChannels[0].ImageData[pos], layer.SortedChannels[1].ImageData[pos], layer.SortedChannels[2].ImageData[pos], layer.SortedChannels[3].ImageData[pos]);
+                    baseColor = CMYKToRGB(layer.SortedChannels[0].ImageData[position], layer.SortedChannels[1].ImageData[position], layer.SortedChannels[2].ImageData[position], layer.SortedChannels[3].ImageData[position]);
                     break;
                 case ColorModes.Multichannel:
-                    baseColor = CMYKToRGB(layer.SortedChannels[0].ImageData[pos], layer.SortedChannels[1].ImageData[pos], layer.SortedChannels[2].ImageData[pos], 0);
+                    baseColor = CMYKToRGB(layer.SortedChannels[0].ImageData[position], layer.SortedChannels[1].ImageData[position], layer.SortedChannels[2].ImageData[position], 0);
                     break;
                 case ColorModes.Lab:
-                    baseColor = LabToRGB(layer.SortedChannels[0].ImageData[pos], layer.SortedChannels[1].ImageData[pos], layer.SortedChannels[2].ImageData[pos]);
+                    baseColor = LabToRGB(layer.SortedChannels[0].ImageData[position], layer.SortedChannels[1].ImageData[position], layer.SortedChannels[2].ImageData[position]);
                     break;
             }
 
+            // set the alpha
             if (layer.SortedChannels.ContainsKey(-1))
             {
-                baseColor = Color.FromArgb(layer.SortedChannels[-1].ImageData[pos], baseColor);
+                baseColor.a = layer.SortedChannels[-1].ImageData[position];
             }
 
             return baseColor;
@@ -101,9 +100,9 @@
         /// <param name="x">The x position.</param>
         /// <param name="y">The y position.</param>
         /// <returns>The mask color.</returns>
-        private static int GetColor(Mask mask, int x, int y)
+        private static byte GetColor(Mask mask, int x, int y)
         {
-            int num = byte.MaxValue;
+            byte num = byte.MaxValue;
             if (mask.PositionIsRelative)
             {
                 x -= mask.Rect.X;
@@ -131,7 +130,7 @@
         /// <param name="ab">The ab channel.</param>
         /// <param name="bb">The bb channel.</param>
         /// <returns>The RGB color.</returns>
-        private static Color LabToRGB(byte lb, byte ab, byte bb)
+        private static Color32 LabToRGB(byte lb, byte ab, byte bb)
         {
             double num1 = lb;
             double num2 = ab;
@@ -158,7 +157,7 @@
         /// <param name="y">The y channel.</param>
         /// <param name="z">The z channel.</param>
         /// <returns>The RGB color.</returns>
-        private static Color XYZToRGB(double x, double y, double z)
+        private static Color32 XYZToRGB(double x, double y, double z)
         {
             double num1 = x / 100.0;
             double num2 = y / 100.0;
@@ -172,38 +171,26 @@
             double num5 = x2 <= 0.0031308 ? 12.92 * x2 : (1.055 * Math.Pow(x2, 5.0 / 12.0)) - 0.055;
             double num6 = x3 <= 0.0031308 ? 12.92 * x3 : (1.055 * Math.Pow(x3, 5.0 / 12.0)) - 0.055;
 
-            int red = (int)(num4 * 256.0);
-            int green = (int)(num5 * 256.0);
-            int blue = (int)(num6 * 256.0);
+            byte red = (byte)(num4 * 256.0);
+            byte green = (byte)(num5 * 256.0);
+            byte blue = (byte)(num6 * 256.0);
 
-            if (red < 0)
-            {
-                red = 0;
-            }
-            else if (red > byte.MaxValue)
+            if (red > byte.MaxValue)
             {
                 red = byte.MaxValue;
             }
 
-            if (green < 0)
-            {
-                green = 0;
-            }
-            else if (green > byte.MaxValue)
+            if (green > byte.MaxValue)
             {
                 green = byte.MaxValue;
             }
 
-            if (blue < 0)
-            {
-                blue = 0;
-            }
-            else if (blue > byte.MaxValue)
+            if (blue > byte.MaxValue)
             {
                 blue = byte.MaxValue;
             }
 
-            return Color.FromArgb(red, green, blue);
+            return new Color32(red, green, blue, 1);
         }
 
         /// <summary>
@@ -214,70 +201,34 @@
         /// <param name="y">The y channel.</param>
         /// <param name="k">The k channel.</param>
         /// <returns>The RGB color.</returns>
-        private static Color CMYKToRGB(byte c, byte m, byte y, byte k)
+        private static Color32 CMYKToRGB(byte c, byte m, byte y, byte k)
         {
             double num1 = Math.Pow(2.0, 8.0);
             double num6 = 1.0 - (c / num1);
             double num7 = 1.0 - (m / num1);
             double num8 = 1.0 - (y / num1);
             double num9 = 1.0 - (k / num1);
-            int red = (int)((1.0 - ((num6 * (1.0 - num9)) + num9)) * byte.MaxValue);
-            int green = (int)((1.0 - ((num7 * (1.0 - num9)) + num9)) * byte.MaxValue);
-            int blue = (int)((1.0 - ((num8 * (1.0 - num9)) + num9)) * byte.MaxValue);
-            if (red < 0)
-            {
-                red = 0;
-            }
-            else if (red > byte.MaxValue)
+
+            byte red = (byte)((1.0 - ((num6 * (1.0 - num9)) + num9)) * byte.MaxValue);
+            byte green = (byte)((1.0 - ((num7 * (1.0 - num9)) + num9)) * byte.MaxValue);
+            byte blue = (byte)((1.0 - ((num8 * (1.0 - num9)) + num9)) * byte.MaxValue);
+
+            if (red > byte.MaxValue)
             {
                 red = byte.MaxValue;
             }
 
-            if (green < 0)
-            {
-                green = 0;
-            }
-            else if (green > byte.MaxValue)
+            if (green > byte.MaxValue)
             {
                 green = byte.MaxValue;
             }
 
-            if (blue < 0)
-            {
-                blue = 0;
-            }
-            else if (blue > byte.MaxValue)
+            if (blue > byte.MaxValue)
             {
                 blue = byte.MaxValue;
             }
 
-            return Color.FromArgb(red, green, blue);
-        }
-
-        /// <summary>
-        /// Represents the color data of a pixel.
-        /// </summary>
-        private struct PixelData
-        {
-            /// <summary>
-            /// The blue channel.
-            /// </summary>
-            public byte Blue;
-
-            /// <summary>
-            /// The green channel.
-            /// </summary>
-            public byte Green;
-
-            /// <summary>
-            /// The red channel.
-            /// </summary>
-            public byte Red;
-
-            /// <summary>
-            /// The alpha channel.
-            /// </summary>
-            public byte Alpha;
+            return new Color32(red, green, blue, 1);
         }
     }
 }
