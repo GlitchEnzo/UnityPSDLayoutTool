@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Drawing;
     using System.IO;
     using System.Linq;
     using System.Text;
@@ -590,7 +589,7 @@
         /// <param name="layer">The <see cref="Layer"/> to create a <see cref="TextMesh"/> from.</param>
         private static void CreateTextGameObject(Layer layer)
         {
-            UnityEngine.Color color = new UnityEngine.Color(layer.FillColor.R, layer.FillColor.G, layer.FillColor.B, layer.FillColor.A);
+            Color color = new Color(layer.FillColor.R, layer.FillColor.G, layer.FillColor.B, layer.FillColor.A);
 
             float x = layer.Rect.X / PixelsToUnits;
             float y = layer.Rect.Y / PixelsToUnits;
@@ -604,7 +603,7 @@
 
             currentDepth -= depthStep;
 
-            UnityEngine.Font font = Resources.GetBuiltinResource<UnityEngine.Font>("Arial.ttf");
+            Font font = Resources.GetBuiltinResource<Font>("Arial.ttf");
 
             MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
             meshRenderer.material = font.material;
@@ -795,7 +794,7 @@
         /// </summary>
         /// <param name="layer">The <see cref="Layer"/> to use to create the UI Image.</param>
         /// <returns>The newly constructed Image object.</returns>
-        private static UnityEngine.UI.Image CreateUIImage(Layer layer)
+        private static Image CreateUIImage(Layer layer)
         {
             float x = layer.Rect.X / PixelsToUnits;
             float y = layer.Rect.Y / PixelsToUnits;
@@ -819,7 +818,7 @@
 
             currentDepth -= depthStep;
 
-            UnityEngine.UI.Image image = gameObject.AddComponent<UnityEngine.UI.Image>();
+            Image image = gameObject.AddComponent<Image>();
             image.sprite = CreateSprite(layer);
 
             RectTransform transform = gameObject.GetComponent<RectTransform>();
@@ -834,7 +833,7 @@
         /// <param name="layer">The <see cref="Layer"/> used to create the <see cref="UnityEngine.UI.Text"/> from.</param>
         private static void CreateUIText(Layer layer)
         {
-            UnityEngine.Color color = new UnityEngine.Color(layer.FillColor.R, layer.FillColor.G, layer.FillColor.B, layer.FillColor.A);
+            Color color = new Color(layer.FillColor.R, layer.FillColor.G, layer.FillColor.B, layer.FillColor.A);
 
             float x = layer.Rect.X / PixelsToUnits;
             float y = layer.Rect.Y / PixelsToUnits;
@@ -855,7 +854,7 @@
 
             currentDepth -= depthStep;
 
-            UnityEngine.Font font = Resources.GetBuiltinResource<UnityEngine.Font>("Arial.ttf");
+            Font font = Resources.GetBuiltinResource<Font>("Arial.ttf");
 
             Text textUI = gameObject.AddComponent<Text>();
             textUI.text = layer.Text;
@@ -901,18 +900,18 @@
         private static void CreateUIButton(Layer layer)
         {
             // create an empty Image object with a Button behavior attached
-            UnityEngine.UI.Image image = CreateUIImage(layer);
+            Image image = CreateUIImage(layer);
             Button button = image.gameObject.AddComponent<Button>();
 
             // look through the children for a clip rect
-            Rectangle? clipRect = null;
-            foreach (Layer child in layer.Children)
-            {
-                if (child.Name.ContainsIgnoreCase("|ClipRect"))
-                {
-                    clipRect = child.Rect;
-                }
-            }
+            ////Rectangle? clipRect = null;
+            ////foreach (Layer child in layer.Children)
+            ////{
+            ////    if (child.Name.ContainsIgnoreCase("|ClipRect"))
+            ////    {
+            ////        clipRect = child.Rect;
+            ////    }
+            ////}
 
             // look through the children for the sprite states
             foreach (Layer child in layer.Children)
