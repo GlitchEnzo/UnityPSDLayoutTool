@@ -1,7 +1,7 @@
 ﻿namespace PhotoshopFile
 {
     using System.Collections.Specialized;
-    using System.Drawing;
+    using UnityEngine;
 
     /// <summary>
     /// The mask data for a layer
@@ -14,9 +14,9 @@
         private static readonly int PositionIsRelativeBit = BitVector32.CreateMask();
 
         /// <summary>
-        /// The <see cref="Rectangle"/> making up the mask.
+        /// The <see cref="Rect"/> making up the mask.
         /// </summary>
-        private Rectangle rect = Rectangle.Empty;
+        private Rect rect;
 
         /// <summary>
         /// The flags for the mask.
@@ -38,11 +38,11 @@
             }
 
             long position = reader.BaseStream.Position;
-            rect = new Rectangle();
-            rect.Y = reader.ReadInt32();
-            rect.X = reader.ReadInt32();
-            rect.Height = reader.ReadInt32() - rect.Y;
-            rect.Width = reader.ReadInt32() - rect.X;
+            rect = new Rect();
+            rect.y = reader.ReadInt32();
+            rect.x = reader.ReadInt32();
+            rect.height = reader.ReadInt32() - rect.y;
+            rect.width = reader.ReadInt32() - rect.x;
             DefaultColor = reader.ReadByte();
             flags = new BitVector32(reader.ReadByte());
             if ((int)num1 == 36)
@@ -66,7 +66,7 @@
         /// <summary>
         /// Gets the rectangle enclosing the mask.
         /// </summary>
-        public Rectangle Rect
+        public Rect Rect
         {
             get { return rect; }
         }
@@ -84,7 +84,8 @@
         /// </summary>
         public byte[] ImageData
         {
-            get; private set;
+            get;
+            private set;
         }
 
         /// <summary>
@@ -98,7 +99,7 @@
         /// <param name="reader">The reader to use to read the pixel data.</param>
         internal void LoadPixelData(BinaryReverseReader reader)
         {
-            if (rect.IsEmpty || !Layer.SortedChannels.ContainsKey(-2))
+            if (rect.width <= 0 || !Layer.SortedChannels.ContainsKey(-2))
             {
                 return;
             }
@@ -112,17 +113,17 @@
                 switch (Layer.PsdFile.Depth)
                 {
                     case 1:
-                        columns = rect.Width;
+                        columns = (int)rect.width;
                         break;
                     case 8:
-                        columns = rect.Width;
+                        columns = (int)rect.width;
                         break;
                     case 16:
-                        columns = rect.Width * 2;
+                        columns = (int)rect.width * 2;
                         break;
                 }
 
-                channel.ImageData = new byte[rect.Height * columns];
+                channel.ImageData = new byte[(int)rect.height * columns];
                 for (int index = 0; index < channel.ImageData.Length; ++index)
                 {
                     channel.ImageData[index] = 171;
@@ -135,15 +136,15 @@
                         dataReader.Read(channel.ImageData, 0, channel.ImageData.Length);
                         break;
                     case ImageCompression.Rle:
-                        int[] nums = new int[rect.Height];
-                        for (int i = 0; i < rect.Height; i++)
+                        int[] nums = new int[(int)rect.height];
+                        for (int i = 0; i < (int)rect.height; i++)
                         {
                             nums[i] = dataReader.ReadInt16();
                         }
 
-                        for (int index = 0; index < rect.Height; ++index)
+                        for (int index = 0; index < (int)rect.height; ++index)
                         {
-                            int startIdx = index * rect.Width;
+                            int startIdx = index * (int)rect.width;
                             RleHelper.DecodedRow(dataReader.BaseStream, channel.ImageData, startIdx, columns);
                         }
 

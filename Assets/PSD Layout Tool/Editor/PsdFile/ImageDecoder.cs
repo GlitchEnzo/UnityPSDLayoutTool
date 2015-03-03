@@ -105,18 +105,18 @@
             byte num = byte.MaxValue;
             if (mask.PositionIsRelative)
             {
-                x -= mask.Rect.X;
-                y -= mask.Rect.Y;
+                x -= (int)mask.Rect.x;
+                y -= (int)mask.Rect.y;
             }
             else
             {
-                x = x + mask.Layer.Rect.X - mask.Rect.X;
-                y = y + mask.Layer.Rect.Y - mask.Rect.Y;
+                x = x + mask.Layer.Rect.X - (int)mask.Rect.x;
+                y = y + mask.Layer.Rect.Y - (int)mask.Rect.y;
             }
 
-            if (y >= 0 && (y < mask.Rect.Height && x >= 0) && x < mask.Rect.Width)
+            if (y >= 0 && (y < mask.Rect.height && x >= 0) && x < mask.Rect.width)
             {
-                int index = (y * mask.Rect.Width) + x;
+                int index = (y * (int)mask.Rect.width) + x;
                 num = index >= mask.ImageData.Length ? byte.MaxValue : mask.ImageData[index];
             }
 
