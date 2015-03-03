@@ -2,8 +2,8 @@
 {
     using System.Collections.Generic;
     using System.Collections.Specialized;
-    using System.Drawing;
     using System.IO;
+    using UnityEngine;
 
     /// <summary>
     /// Contains the data representation of a PSD layer
@@ -51,11 +51,11 @@
             PsdFile = psdFile;
 
             // read the rect
-            Rectangle rect = new Rectangle();
-            rect.Y = reader.ReadInt32();
-            rect.X = reader.ReadInt32();
-            rect.Height = reader.ReadInt32() - rect.Y;
-            rect.Width = reader.ReadInt32() - rect.X;
+            Rect rect = new Rect();
+            rect.y = reader.ReadInt32();
+            rect.x = reader.ReadInt32();
+            rect.height = reader.ReadInt32() - rect.y;
+            rect.width = reader.ReadInt32() - rect.x;
             Rect = rect;
 
             // read the channels
@@ -190,7 +190,7 @@
         /// <summary>
         /// Gets the rectangle containing the contents of the layer.
         /// </summary>
-        public Rectangle Rect { get; private set; }
+        public Rect Rect { get; private set; }
 
         /// <summary>
         /// Gets a list of the Channel information.
@@ -296,7 +296,7 @@
             float green = dataReader.ReadFloat();
             dataReader.ReadByte();
             float blue = dataReader.ReadFloat();
-            FillColor = Color.FromArgb((int)(alpha * (double)byte.MaxValue), (int)(red * (double)byte.MaxValue), (int)(green * (double)byte.MaxValue), (int)(blue * (double)byte.MaxValue));
+            FillColor = new Color(red * byte.MaxValue, green * byte.MaxValue, blue * byte.MaxValue, alpha * byte.MaxValue);
 
             // read the font name
             dataReader.Seek("/FontSet ");

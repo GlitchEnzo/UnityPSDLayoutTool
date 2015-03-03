@@ -15,23 +15,23 @@
         /// <returns>The <see cref="Texture2D"/> decoded from the layer.</returns>
         public static Texture2D DecodeImage(Layer layer)
         {
-            if (layer.Rect.Width == 0 || layer.Rect.Height == 0)
+            if (layer.Rect.width == 0 || layer.Rect.height == 0)
             {
                 return null;
             }
 
-            Texture2D texture = new Texture2D(layer.Rect.Width, layer.Rect.Height, TextureFormat.ARGB32, false);
+            Texture2D texture = new Texture2D((int)layer.Rect.width, (int)layer.Rect.height, TextureFormat.ARGB32, false);
 
-            Color32[] colors = new Color32[layer.Rect.Width * layer.Rect.Height];
+            Color32[] colors = new Color32[(int)(layer.Rect.width * layer.Rect.height)];
 
-            for (int y = 0; y < layer.Rect.Height; ++y)
+            for (int y = 0; y < layer.Rect.height; ++y)
             {
-                int layerRow = y * layer.Rect.Width;
+                int layerRow = y * (int)layer.Rect.width;
 
                 // we need to reverse the Y position for the Unity texture
-                int textureRow = (layer.Rect.Height - 1 - y) * layer.Rect.Width;
+                int textureRow = ((int)layer.Rect.height - 1 - y) * (int)layer.Rect.width;
 
-                for (int x = 0; x < layer.Rect.Width; ++x)
+                for (int x = 0; x < layer.Rect.width; ++x)
                 {
                     int layerPosition = layerRow + x;
                     int texturePosition = textureRow + x;
@@ -110,8 +110,8 @@
             }
             else
             {
-                x = x + mask.Layer.Rect.X - (int)mask.Rect.x;
-                y = y + mask.Layer.Rect.Y - (int)mask.Rect.y;
+                x = x + (int)mask.Layer.Rect.x - (int)mask.Rect.x;
+                y = y + (int)mask.Layer.Rect.y - (int)mask.Rect.y;
             }
 
             if (y >= 0 && (y < mask.Rect.height && x >= 0) && x < mask.Rect.width)

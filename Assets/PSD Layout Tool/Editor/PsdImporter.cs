@@ -234,7 +234,7 @@
 
                     currentGroupLayer = layer;
                 }
-                else if (layer.Rect.Width != 0 && layer.Rect.Height != 0)
+                else if (layer.Rect.width != 0 && layer.Rect.height != 0)
                 {
                     // It must be a text layer or image layer
                     if (currentGroupLayer != null)
@@ -295,7 +295,7 @@
         {
             return layer.Name.Contains("</Layer set>") ||
                 layer.Name.Contains("</Layer group>") ||
-                (layer.Name == " copy" && layer.Rect.Height == 0);
+                (layer.Name == " copy" && layer.Rect.height == 0);
         }
 
         /// <summary>
@@ -347,7 +347,7 @@
         private static void ExportLayer(Layer layer)
         {
             layer.Name = MakeNameSafe(layer.Name);
-            if (layer.Children.Count > 0 || layer.Rect.Width == 0)
+            if (layer.Children.Count > 0 || layer.Rect.width == 0)
             {
                 ExportFolderLayer(layer);
             }
@@ -512,7 +512,7 @@
         {
             string file = string.Empty;
 
-            if (layer.Children.Count == 0 && layer.Rect.Width > 0)
+            if (layer.Children.Count == 0 && layer.Rect.width > 0)
             {
                 // decode the layer into a texture
                 Texture2D texture = ImageDecoder.DecodeImage(layer);
@@ -545,7 +545,7 @@
         {
             Sprite sprite = null;
 
-            if (layer.Children.Count == 0 && layer.Rect.Width > 0)
+            if (layer.Children.Count == 0 && layer.Rect.width > 0)
             {
                 string file = CreatePNG(layer);
                 sprite = ImportSprite(GetRelativePath(file), packingTag);
@@ -589,13 +589,13 @@
         /// <param name="layer">The <see cref="Layer"/> to create a <see cref="TextMesh"/> from.</param>
         private static void CreateTextGameObject(Layer layer)
         {
-            Color color = new Color(layer.FillColor.R, layer.FillColor.G, layer.FillColor.B, layer.FillColor.A);
+            Color color = layer.FillColor;
 
-            float x = layer.Rect.X / PixelsToUnits;
-            float y = layer.Rect.Y / PixelsToUnits;
+            float x = layer.Rect.x / PixelsToUnits;
+            float y = layer.Rect.y / PixelsToUnits;
             y = (CanvasSize.y / PixelsToUnits) - y;
-            float width = layer.Rect.Width / PixelsToUnits;
-            float height = layer.Rect.Height / PixelsToUnits;
+            float width = layer.Rect.width / PixelsToUnits;
+            float height = layer.Rect.height / PixelsToUnits;
 
             GameObject gameObject = new GameObject(layer.Name);
             gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
@@ -637,11 +637,11 @@
         /// <returns>The <see cref="SpriteRenderer"/> component attached to the new sprite <see cref="GameObject"/>.</returns>
         private static SpriteRenderer CreateSpriteGameObject(Layer layer)
         {
-            float x = layer.Rect.X / PixelsToUnits;
-            float y = layer.Rect.Y / PixelsToUnits;
+            float x = layer.Rect.x / PixelsToUnits;
+            float y = layer.Rect.y / PixelsToUnits;
             y = (CanvasSize.y / PixelsToUnits) - y;
-            float width = layer.Rect.Width / PixelsToUnits;
-            float height = layer.Rect.Height / PixelsToUnits;
+            float width = layer.Rect.width / PixelsToUnits;
+            float height = layer.Rect.height / PixelsToUnits;
 
             GameObject gameObject = new GameObject(layer.Name);
             gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
@@ -796,8 +796,8 @@
         /// <returns>The newly constructed Image object.</returns>
         private static Image CreateUIImage(Layer layer)
         {
-            float x = layer.Rect.X / PixelsToUnits;
-            float y = layer.Rect.Y / PixelsToUnits;
+            float x = layer.Rect.x / PixelsToUnits;
+            float y = layer.Rect.y / PixelsToUnits;
 
             // Photoshop increase Y while going down. Unity increases Y while going up.  So, we need to reverse the Y position.
             y = (CanvasSize.y / PixelsToUnits) - y;
@@ -806,8 +806,8 @@
             x = x - ((CanvasSize.x / 2) / PixelsToUnits);
             y = y - ((CanvasSize.y / 2) / PixelsToUnits);
 
-            float width = layer.Rect.Width / PixelsToUnits;
-            float height = layer.Rect.Height / PixelsToUnits;
+            float width = layer.Rect.width / PixelsToUnits;
+            float height = layer.Rect.height / PixelsToUnits;
 
             GameObject gameObject = new GameObject(layer.Name);
             gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
@@ -833,10 +833,10 @@
         /// <param name="layer">The <see cref="Layer"/> used to create the <see cref="UnityEngine.UI.Text"/> from.</param>
         private static void CreateUIText(Layer layer)
         {
-            Color color = new Color(layer.FillColor.R, layer.FillColor.G, layer.FillColor.B, layer.FillColor.A);
+            Color color = layer.FillColor;
 
-            float x = layer.Rect.X / PixelsToUnits;
-            float y = layer.Rect.Y / PixelsToUnits;
+            float x = layer.Rect.x / PixelsToUnits;
+            float y = layer.Rect.y / PixelsToUnits;
 
             // Photoshop increase Y while going down. Unity increases Y while going up.  So, we need to reverse the Y position.
             y = (CanvasSize.y / PixelsToUnits) - y;
@@ -845,8 +845,8 @@
             x = x - ((CanvasSize.x / 2) / PixelsToUnits);
             y = y - ((CanvasSize.y / 2) / PixelsToUnits);
 
-            float width = layer.Rect.Width / PixelsToUnits;
-            float height = layer.Rect.Height / PixelsToUnits;
+            float width = layer.Rect.width / PixelsToUnits;
+            float height = layer.Rect.height / PixelsToUnits;
 
             GameObject gameObject = new GameObject(layer.Name);
             gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
@@ -955,8 +955,8 @@
 
                     image.sprite = CreateSprite(child);
 
-                    float x = child.Rect.X / PixelsToUnits;
-                    float y = child.Rect.Y / PixelsToUnits;
+                    float x = child.Rect.x / PixelsToUnits;
+                    float y = child.Rect.y / PixelsToUnits;
 
                     // Photoshop increase Y while going down. Unity increases Y while going up.  So, we need to reverse the Y position.
                     y = (CanvasSize.y / PixelsToUnits) - y;
@@ -965,8 +965,8 @@
                     x = x - ((CanvasSize.x / 2) / PixelsToUnits);
                     y = y - ((CanvasSize.y / 2) / PixelsToUnits);
 
-                    float width = child.Rect.Width / PixelsToUnits;
-                    float height = child.Rect.Height / PixelsToUnits;
+                    float width = child.Rect.width / PixelsToUnits;
+                    float height = child.Rect.height / PixelsToUnits;
 
                     image.gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
 

@@ -82,33 +82,33 @@
                 switch (Layer.PsdFile.Depth)
                 {
                     case 1:
-                        columns = Layer.Rect.Width;
+                        columns = (int)Layer.Rect.width;
                         break;
                     case 8:
-                        columns = Layer.Rect.Width;
+                        columns = (int)Layer.Rect.width;
                         break;
                     case 16:
-                        columns = Layer.Rect.Width * 2;
+                        columns = (int)Layer.Rect.width * 2;
                         break;
                 }
 
-                ImageData = new byte[Layer.Rect.Height * columns];
+                ImageData = new byte[(int)Layer.Rect.height * columns];
                 switch (ImageCompression)
                 {
                     case ImageCompression.Raw:
                         dataReader.Read(ImageData, 0, ImageData.Length);
                         break;
                     case ImageCompression.Rle:
-                        int[] nums = new int[Layer.Rect.Height];
+                        int[] nums = new int[(int)Layer.Rect.height];
 
-                        for (int i = 0; i < Layer.Rect.Height; i++)
+                        for (int i = 0; i < Layer.Rect.height; i++)
                         {
                             nums[i] = dataReader.ReadInt16();
                         }
 
-                        for (int index = 0; index < Layer.Rect.Height; ++index)
+                        for (int index = 0; index < Layer.Rect.height; ++index)
                         {
-                            int startIdx = index * Layer.Rect.Width;
+                            int startIdx = index * (int)Layer.Rect.width;
                             RleHelper.DecodedRow(dataReader.BaseStream, ImageData, startIdx, columns);
                         }
 
