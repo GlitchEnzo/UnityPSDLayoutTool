@@ -25,7 +25,7 @@
         public override short ReadInt16()
         {
             short num = base.ReadInt16();
-			num = ReverseBytes(num);
+            num = ReverseBytes(num);
             return num;
         }
 
@@ -36,7 +36,7 @@
         public override int ReadInt32()
         {
             int num = base.ReadInt32();
-			num = ReverseBytes(num);
+            num = ReverseBytes(num);
             return num;
         }
 
@@ -47,7 +47,7 @@
         public override long ReadInt64()
         {
             long num = base.ReadInt64();
-			num = ReverseBytes(num);
+            num = ReverseBytes(num);
             return num;
         }
 
@@ -58,7 +58,7 @@
         public override ushort ReadUInt16()
         {
             ushort num = base.ReadUInt16();
-			num = ReverseBytes(num);
+            num = ReverseBytes(num);
             return num;
         }
 
@@ -69,7 +69,7 @@
         public override uint ReadUInt32()
         {
             uint num = base.ReadUInt32();
-			num = ReverseBytes(num);
+            num = ReverseBytes(num);
             return num;
         }
 
@@ -80,7 +80,7 @@
         public override ulong ReadUInt64()
         {
             ulong num = base.ReadUInt64();
-			num = ReverseBytes(num);
+            num = ReverseBytes(num);
             return num;
         }
 
@@ -99,7 +99,7 @@
 
             return new string(Encoding.ASCII.GetChars(bytes));
         }
-        
+
         /// <summary>
         /// Reads a floating point number from the stream.  It reads until the newline character '\n' is found.
         /// </summary>
@@ -176,73 +176,73 @@
             Seek(bytes);
         }
 
-		/// <summary>
-		/// Reverses the bytes in order to convert back and forth between Big and Little Endian.
-		/// </summary>
-		/// <returns>The number with the reversed bytes.</returns>
-		/// <param name="value">The number to reverse the bytes of.</param>
-		/// <remarks>
-		/// See: http://www.csharp-examples.net/reverse-bytes/
-		/// And: http://stackoverflow.com/questions/19560436/bitwise-endian-swap-for-various-types
-		/// </remarks>
-		private Int16 ReverseBytes(Int16 value)
-		{
-			return (Int16)ReverseBytes((UInt16)value);
-		}
+        /// <summary>
+        /// Reverses the bytes in order to convert back and forth between Big and Little Endian.
+        /// </summary>
+        /// <returns>The number with the reversed bytes.</returns>
+        /// <param name="value">The number to reverse the bytes of.</param>
+        /// <remarks>
+        /// See: http://www.csharp-examples.net/reverse-bytes/
+        /// And: http://stackoverflow.com/questions/19560436/bitwise-endian-swap-for-various-types
+        /// </remarks>
+        private Int16 ReverseBytes(Int16 value)
+        {
+            return (Int16)ReverseBytes((UInt16)value);
+        }
 
-		/// <summary>
-		/// Reverses the bytes in order to convert back and forth between Big and Little Endian.
-		/// </summary>
-		/// <returns>The number with the reversed bytes.</returns>
-		/// <param name="value">The number to reverse the bytes of.</param>
-		private Int32 ReverseBytes(Int32 value)
-		{
-			return (Int32)ReverseBytes((UInt32)value);
-		}
+        /// <summary>
+        /// Reverses the bytes in order to convert back and forth between Big and Little Endian.
+        /// </summary>
+        /// <returns>The number with the reversed bytes.</returns>
+        /// <param name="value">The number to reverse the bytes of.</param>
+        private Int32 ReverseBytes(Int32 value)
+        {
+            return (Int32)ReverseBytes((UInt32)value);
+        }
 
-		/// <summary>
-		/// Reverses the bytes in order to convert back and forth between Big and Little Endian.
-		/// </summary>
-		/// <returns>The number with the reversed bytes.</returns>
-		/// <param name="value">The number to reverse the bytes of.</param>
-		private Int64 ReverseBytes(Int64 value)
-		{
-			return (Int64)ReverseBytes((UInt64)value);
-		}
+        /// <summary>
+        /// Reverses the bytes in order to convert back and forth between Big and Little Endian.
+        /// </summary>
+        /// <returns>The number with the reversed bytes.</returns>
+        /// <param name="value">The number to reverse the bytes of.</param>
+        private Int64 ReverseBytes(Int64 value)
+        {
+            return (Int64)ReverseBytes((UInt64)value);
+        }
 
-		/// <summary>
-		/// Reverses the bytes in order to convert back and forth between Big and Little Endian.
-		/// </summary>
-		/// <returns>The number with the reversed bytes.</returns>
-		/// <param name="value">The number to reverse the bytes of.</param>
-		private UInt16 ReverseBytes(UInt16 value)
-		{
-			return (UInt16)((value & 0xFFU) << 8 | (value & 0xFF00U) >> 8);
-		}
+        /// <summary>
+        /// Reverses the bytes in order to convert back and forth between Big and Little Endian.
+        /// </summary>
+        /// <returns>The number with the reversed bytes.</returns>
+        /// <param name="value">The number to reverse the bytes of.</param>
+        private UInt16 ReverseBytes(UInt16 value)
+        {
+            return (UInt16)((value & 0xFFU) << 8 | (value & 0xFF00U) >> 8);
+        }
 
-		/// <summary>
-		/// Reverses the bytes in order to convert back and forth between Big and Little Endian.
-		/// </summary>
-		/// <returns>The number with the reversed bytes.</returns>
-		/// <param name="value">The number to reverse the bytes of.</param>
-		private UInt32 ReverseBytes(UInt32 value)
-		{
-			return (value & 0x000000FFU) << 24 | (value & 0x0000FF00U) << 8 |
-				(value & 0x00FF0000U) >> 8 | (value & 0xFF000000U) >> 24;
-		}
+        /// <summary>
+        /// Reverses the bytes in order to convert back and forth between Big and Little Endian.
+        /// </summary>
+        /// <returns>The number with the reversed bytes.</returns>
+        /// <param name="value">The number to reverse the bytes of.</param>
+        private UInt32 ReverseBytes(UInt32 value)
+        {
+            return (value & 0x000000FFU) << 24 | (value & 0x0000FF00U) << 8 |
+                (value & 0x00FF0000U) >> 8 | (value & 0xFF000000U) >> 24;
+        }
 
-		/// <summary>
-		/// Reverses the bytes in order to convert back and forth between Big and Little Endian.
-		/// </summary>
-		/// <returns>The number with the reversed bytes.</returns>
-		/// <param name="value">The number to reverse the bytes of.</param>
-		private UInt64 ReverseBytes(UInt64 value)
-		{
-			return (value & 0x00000000000000FFUL) << 56 | (value & 0x000000000000FF00UL) << 40 |
-				(value & 0x0000000000FF0000UL) << 24 | (value & 0x00000000FF000000UL) << 8 |
-					(value & 0x000000FF00000000UL) >> 8 | (value & 0x0000FF0000000000UL) >> 24 |
-					(value & 0x00FF000000000000UL) >> 40 | (value & 0xFF00000000000000UL) >> 56;
-		}
+        /// <summary>
+        /// Reverses the bytes in order to convert back and forth between Big and Little Endian.
+        /// </summary>
+        /// <returns>The number with the reversed bytes.</returns>
+        /// <param name="value">The number to reverse the bytes of.</param>
+        private UInt64 ReverseBytes(UInt64 value)
+        {
+            return (value & 0x00000000000000FFUL) << 56 | (value & 0x000000000000FF00UL) << 40 |
+                (value & 0x0000000000FF0000UL) << 24 | (value & 0x00000000FF000000UL) << 8 |
+                    (value & 0x000000FF00000000UL) >> 8 | (value & 0x0000FF0000000000UL) >> 24 |
+                    (value & 0x00FF000000000000UL) >> 40 | (value & 0xFF00000000000000UL) >> 56;
+        }
 
         /// <summary>
         /// Searches through the stream for the given byte array.  If found, the position in the stream
