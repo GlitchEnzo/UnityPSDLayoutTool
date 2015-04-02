@@ -699,7 +699,6 @@
 
             UnityEditor.Animations.AnimatorControllerLayer controllerLayer = controller.layers[0];
             UnityEditor.Animations.AnimatorState state = controllerLayer.stateMachine.AddState(layer.Name);
-            //state.SetAnimationClip(CreateSpriteAnimationClip(layer.Name, frames, fps));
             state.motion = CreateSpriteAnimationClip(layer.Name, frames, fps);
 
             AssetDatabase.CreateAsset(controller, GetRelativePath(currentPath) + "/" + layer.Name + ".controller");
@@ -757,12 +756,7 @@
             }
 
 #if UNITY_5
-            //AnimationUtility.SetAnimationType(clip, ModelImporterAnimationType.Generic); // <-- Deprecated
             AnimationUtility.SetObjectReferenceCurve(clip, curveBinding, keyFrames);
-
-            //clip.ValidateIfRetargetable(true); // <-- Deprecated
-            //clip.humanMotion = false; // <-- Read only
-            //clip.isHumanMotion = false; // <-- Read only
 #else // Unity 4
             AnimationUtility.SetAnimationType(clip, ModelImporterAnimationType.Generic);
             AnimationUtility.SetObjectReferenceCurve(clip, curveBinding, keyFrames);
