@@ -21,7 +21,7 @@
         /// <summary>
         /// The current file path to use to save layers as .png files
         /// </summary>
-        private static string currentPath;
+        private static string currentPath; 
 
         /// <summary>
         /// The <see cref="GameObject"/> representing the root PSD layer.  It contains all of the other layers as children GameObjects.
