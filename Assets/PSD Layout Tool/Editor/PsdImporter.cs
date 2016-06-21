@@ -21,23 +21,25 @@
 
         ///attention：
         ///string const as psd layer name keyword!
-        public const string BTN_HEAD = "btn_";              //按钮关键字
-        public const string BTN_TAIL_HIGH = "_highlight";   //按钮高亮关键字
-        public const string BTN_TAIL_DIS = "_disable";      //按钮禁用关键字
+        public const string BTN_HEAD = "btn_";              //button normal image keyword
+        public const string BTN_TAIL_HIGH = "_highlight";   //button highilght image keyward
+        public const string BTN_TAIL_DIS = "_disable";      //buttno disable image keyword
 
-        public const string TEXT_HEAD = "text_";             //文本关键字
+        public const string TEXT_HEAD = "text_";            //text keyword
 
-        public const string PUBLIC_IMG_HEAD = "public_";//公用资源图
+        public const string PUBLIC_IMG_HEAD = "public_";    //public images that more than one UI may use
 
-        //九宫格的图格式:aaa_330_400最终这张图将按照330_400使用
-        private const string PUBLIC_IMG_PATH =  @"\public_images";//公用图集的相对路径
+        //sliced image type, image name like aaa_330_400,image name end with width and height,
+        //Image will layout as sizeDelta=(330,440),rather than current image reak size
+
+        private const string PUBLIC_IMG_PATH =  @"\public_images";//public images relative path
 
         /// <summary>
         /// The current file path to use to save layers as .png files
         /// </summary>
         private static string currentPath;
 
-        public const string currentImgPathRoot = "export_image/";//图片所在的项目根目录
+        public const string currentImgPathRoot = "export_image/";//all images output root dictionary 
         //{
         //    get { return currentPath; }
         //    set { currentPath = value; }
@@ -197,8 +199,6 @@
         /// <param name="asset">The path of to the .psd file relative to the project.</param>
         private static void Import(string asset)
         {
-            createdNameList = new List<string>();
-
             currentDepth = MaximumDepth;
             string fullPath = Path.Combine(GetFullProjectPath(), asset.Replace('\\', '/'));
 
@@ -212,7 +212,7 @@
             string assetPathWithoutFilename = asset.Remove(lastSlash + 1, asset.Length - (lastSlash + 1));
             PsdName = asset.Replace(assetPathWithoutFilename, string.Empty).Replace(".psd", string.Empty);
 
-            currentPath = GetFullProjectPath() + "Assets/export_image"; //图片的相对目录！
+            currentPath = GetFullProjectPath() + "Assets/" + currentImgPathRoot;//output relative dictionay
             currentPath = Path.Combine(currentPath, PsdName);
             createDic(currentPath);
 
@@ -299,13 +299,12 @@
                     {
                         string spriteName = image.sprite.name;
 
-                        //匹配以 数字_数字 结尾的串。匹配结果作为九宫格尺寸
+                        //match str end with number_number,will used as sliced Image
                         string str1 = spriteName; // "4343434";// "testrewer_4_3";
                         Regex reg = new Regex(@"\d+[_]\d+$");
                         Match match = reg.Match(str1);
                         if (match.ToString() != "")
                         {
-                            //Debug.LogError(Time.time + ",str1=" + str1 + ",满足？" + reg.Match(str1).ToString());
                             string[] size = reg.Match(str1).ToString().Split('_');
                             int width = Convert.ToInt32(size[0]);
                             int height = Convert.ToInt32(size[0]);
@@ -321,14 +320,14 @@
 
                     if (allChild[index].name.IndexOf(btnName) == 0)
                     {
-                        if (allChild[index].name.Contains(BTN_TAIL_HIGH))//按钮的高亮图
+                        if (allChild[index].name.Contains(BTN_TAIL_HIGH))//button highlight image
                         {
                             SpriteState sprite = btnList[btnIndex].GetComponent<Button>().spriteState;
                             sprite.pressedSprite = allChild[index].GetComponent<Image>().sprite;
                             btnList[btnIndex].GetComponent<Button>().spriteState = sprite;
                             deleteList.Add(tran);
                         }
-                        if (allChild[index].name.Contains(BTN_TAIL_DIS))//按钮的禁用图
+                        if (allChild[index].name.Contains(BTN_TAIL_DIS))//button disable image 
                         {
                             SpriteState sprite = btnList[btnIndex].GetComponent<Button>().spriteState;
                             sprite.disabledSprite = allChild[index].GetComponent<Image>().sprite;
@@ -647,8 +646,6 @@
             return sb.ToString();
         }
 
-        //避免层级重名导致不能导出同名的图片啊！
-        private static List<string> createdNameList;
         /// <summary>
         /// Exports an art layer as an image file and sprite.  It can also generate text meshes from text layers.
         /// </summary>
@@ -715,7 +712,7 @@
                 string writePath = currentPath;
                 string layerName = trimSpecialHead(layer.Name);
 
-                if (layerName.Contains(PUBLIC_IMG_HEAD))//公用资源
+                if (layerName.Contains(PUBLIC_IMG_HEAD))//common images
                 {
                     writePath = writePath .Substring(0, writePath.LastIndexOf(@"\"));//.Replace(rootPsdGameObject.name, "");// writePath.Substring(0, writePath.LastIndexOf(@"\"));
                     writePath += PUBLIC_IMG_PATH;
@@ -727,18 +724,7 @@
                     Directory.CreateDirectory(writePath);
                 }
                
-                //在相对目录下统一放图片
                 file = Path.Combine(writePath, layerName + ".png");
-
-                //pubilc_1234
-                //Debug.Log(Time.time + ",file path=" + file +
-                //    "\n,layernName=" + layerName +
-                //    "\n,hasHead?" + layerName.Contains(PUBLIC_IMG_HEAD) +
-                //    "\n,hasHead?" + layerName.Contains("public") +
-                //    "\n.currentPath=" + currentPath +
-                //    "\n,psdName=" + rootPsdGameObject.name +
-                //    "\n,writePath=" + writePath +
-                //    "\n,writePath=" + writePath);
 
                 File.WriteAllBytes(file, texture.EncodeToPNG());
             }
@@ -1314,19 +1300,8 @@
         private static void updateLayerName(Layer child, string newName)
         {
             string layerInfo = "";
-            //if(createdNameList.Contains(newName))
-            //{
-            //    Debug.Log(Time.time + "set child newName=" + newName + 
-            //        ",该name已经存在！重命名=" + (newName + createdNameList.Count)+
-            //        ",flags="+ layerInfo);
-            //}
             child.Name = newName;
-
-           //Debug.Log(Time.time + "set child newName=" + newName+
-           //    ",pos="+child.Rect.position +
-           //         ",flags=" + layerInfo);
-
-            createdNameList.Add(newName);
+             
         }
 
         private static void  showLog(string str)
