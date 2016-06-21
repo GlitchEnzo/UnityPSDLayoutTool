@@ -12,19 +12,36 @@
     using UnityEngine;
     using UnityEngine.EventSystems;
     using UnityEngine.UI;
-
-	
-	
+    using System.Collections;
     /// <summary>
     /// Handles all of the importing for a PSD file (exporting textures, creating prefabs, etc).
     /// </summary>
     public static class PsdImporter
     {
+
+        ///attention：
+        ///string const as psd layer name keyword!
+        public const string BTN_HEAD = "btn_";              //按钮关键字
+        public const string BTN_TAIL_HIGH = "_highlight";   //按钮高亮关键字
+        public const string BTN_TAIL_DIS = "_disable";      //按钮禁用关键字
+
+        public const string TEXT_HEAD = "text_";             //文本关键字
+
+        public const string PUBLIC_IMG_HEAD = "public_";//公用资源图
+
+        //九宫格的图格式:aaa_330_400最终这张图将按照330_400使用
+        private const string PUBLIC_IMG_PATH =  @"\public_images";//公用图集的相对路径
+
         /// <summary>
         /// The current file path to use to save layers as .png files
         /// </summary>
         private static string currentPath;
 
+        public const string currentImgPathRoot = "export_image/";//图片所在的项目根目录
+        //{
+        //    get { return currentPath; }
+        //    set { currentPath = value; }
+        //}
         /// <summary>
         /// The <see cref="GameObject"/> representing the root PSD layer.  It contains all of the other layers as children GameObjects.
         /// </summary>
@@ -51,8 +68,8 @@
         /// </summary>
         static PsdImporter()
         {
-            MaximumDepth = 10;
-            PixelsToUnits = 100;
+            MaximumDepth = 1;
+            PixelsToUnits = 1;
         }
 
         /// <summary>
@@ -68,7 +85,13 @@
         /// <summary>
         /// Gets or sets a value indicating whether to use the Unity 4.6+ UI system or not.
         /// </summary>
-        public static bool UseUnityUI { get; set; }
+        public static bool UseUnityUI
+        {
+            get { return _useUnityUI; }
+            set { _useUnityUI = value; }
+        }
+
+        private static bool _useUnityUI = true;
 
         /// <summary>
         /// Gets or sets a value indicating whether the import process should create <see cref="GameObject"/>s in the scene.
@@ -93,8 +116,43 @@
         /// <summary>
         /// Gets or sets the Unity 4.6+ UI canvas.
         /// </summary>
-        private static GameObject Canvas { get; set; }
+        private static GameObject canvasObj { get; set; }
 
+        /// <summary>
+        /// full ui size
+        /// </summary>
+        public static Vector2 ScreenResolution = new Vector2(1280, 760);
+
+
+        /// <summary>
+        /// force use font
+        /// </summary>
+        /// 
+        private static string _textFont = "";
+        public static string textFont
+        {
+            get
+            {
+                if (_textFont == "")
+                {
+                    _textFont = "Arial.ttf";
+                    //Debug.Log(Time.time + ",force set font=" + _textFont);
+                }
+                return _textFont;
+            }
+            set
+            {
+                _textFont = value;
+            }
+        }
+
+        private static bool _fullScreenUI = true;
+        public static bool fullScreenUI
+        {
+            get { return _fullScreenUI; }
+            set { _fullScreenUI = value; }
+        }
+         
         /// <summary>
         /// Gets or sets the current <see cref="PsdFile"/> that is being imported.
         /// </summary>
@@ -139,12 +197,14 @@
         /// <param name="asset">The path of to the .psd file relative to the project.</param>
         private static void Import(string asset)
         {
+            createdNameList = new List<string>();
+
             currentDepth = MaximumDepth;
             string fullPath = Path.Combine(GetFullProjectPath(), asset.Replace('\\', '/'));
 
             PsdFile psd = new PsdFile(fullPath);
-            CanvasSize = new Vector2(psd.Width, psd.Height);
-
+            CanvasSize = ScreenResolution;// new Vector2(psd.Width, psd.Height);
+            Debug.Log(Time.time + "update canvasSize as UI size=" + CanvasSize);
             // Set the depth step based on the layer count.  If there are no layers, default to 0.1f.
             depthStep = psd.Layers.Count != 0 ? MaximumDepth / psd.Layers.Count : 0.1f;
 
@@ -152,9 +212,9 @@
             string assetPathWithoutFilename = asset.Remove(lastSlash + 1, asset.Length - (lastSlash + 1));
             PsdName = asset.Replace(assetPathWithoutFilename, string.Empty).Replace(".psd", string.Empty);
 
-            currentPath = GetFullProjectPath() + "Assets";
+            currentPath = GetFullProjectPath() + "Assets/export_image"; //图片的相对目录！
             currentPath = Path.Combine(currentPath, PsdName);
-            Directory.CreateDirectory(currentPath);
+            createDic(currentPath);
 
             if (LayoutInScene || CreatePrefab)
             {
@@ -162,12 +222,22 @@
                 {
                     CreateUIEventSystem();
                     CreateUICanvas();
-                    rootPsdGameObject = Canvas;
                 }
-                else
+
+                //create ui Root
+                rootPsdGameObject = CreateObj(PsdName);
+                updateParent(rootPsdGameObject, canvasObj);
+
+                //if (fullScreenUI)
                 {
-                    rootPsdGameObject = new GameObject(PsdName);
+                    RectTransform rectRoot = rootPsdGameObject.GetComponent<RectTransform>();
+                    rectRoot.anchorMin = new Vector2(0, 0);
+                    rectRoot.anchorMax = new Vector2(1, 1);
+                    rectRoot.offsetMin = Vector2.zero;
+                    rectRoot.offsetMax = Vector2.zero;
                 }
+                Vector3 rootPos = Vector3.zero;
+                updateRectPosition(rootPsdGameObject, rootPos, true);
 
                 currentGroupGameObject = rootPsdGameObject;
             }
@@ -187,7 +257,111 @@
                 }
             }
 
+            //all ui items created, update components
+            Debug.Log(Time.time + ",dealUI=" + rootPsdGameObject.name + ",finish");
+
+            int childCount = rootPsdGameObject.transform.childCount;
+            for (int index = 0; index < childCount; index++)
+            {
+                Transform tran = rootPsdGameObject.transform.GetChild(index);
+                tran.position += new Vector3(ScreenResolution.x / 2f, ScreenResolution.y / 2f, 0);
+            }
+
+
+            Dictionary<Transform, bool> _dealDic = new Dictionary<Transform, bool>(); //flag if item will be deleted
+
+            List<Transform> btnList = new List<Transform>();
+            List<Transform> deleteList = new List<Transform>();
+
+            Transform[] allChild = rootPsdGameObject.GetComponentsInChildren<Transform>();
+            for (int index = 0; index < allChild.Length; index++)
+            {
+                Transform tran = allChild[index];
+                if (tran.name.IndexOf(BTN_HEAD) == 0)
+                {
+                    Button button = tran.gameObject.AddComponent<Button>();
+                    tran.GetComponent<Image>().raycastTarget = true;
+                    button.transition = Selectable.Transition.SpriteSwap;
+                    btnList.Add(tran);
+                }
+            }
+
+            for (int btnIndex = 0; btnIndex < btnList.Count; btnIndex++)
+            {
+                string btnName = btnList[btnIndex].name;
+                for (int index = 0; index < allChild.Length; index++)
+                {
+                    Transform tran = allChild[index];
+
+                    //update image sprite deltaSize and PNG attribute
+                    Image image = tran.GetComponent<Image>();
+                    if (image != null && image.sprite != null)
+                    {
+                        string spriteName = image.sprite.name;
+
+                        //匹配以 数字_数字 结尾的串。匹配结果作为九宫格尺寸
+                        string str1 = spriteName; // "4343434";// "testrewer_4_3";
+                        Regex reg = new Regex(@"\d+[_]\d+$");
+                        Match match = reg.Match(str1);
+                        if (match.ToString() != "")
+                        {
+                            //Debug.LogError(Time.time + ",str1=" + str1 + ",满足？" + reg.Match(str1).ToString());
+                            string[] size = reg.Match(str1).ToString().Split('_');
+                            int width = Convert.ToInt32(size[0]);
+                            int height = Convert.ToInt32(size[0]);
+                            image.GetComponent<RectTransform>().sizeDelta = new Vector2(width, height);
+                            image.type = Image.Type.Sliced;
+
+                            if (image.sprite.border == Vector4.zero)
+                            {
+                                Debug.LogError(Time.time + "need to set png=" + image.sprite.name + ",slice border");
+                            }
+                        }
+                    }
+
+                    if (allChild[index].name.IndexOf(btnName) == 0)
+                    {
+                        if (allChild[index].name.Contains(BTN_TAIL_HIGH))//按钮的高亮图
+                        {
+                            SpriteState sprite = btnList[btnIndex].GetComponent<Button>().spriteState;
+                            sprite.pressedSprite = allChild[index].GetComponent<Image>().sprite;
+                            btnList[btnIndex].GetComponent<Button>().spriteState = sprite;
+                            deleteList.Add(tran);
+                        }
+                        if (allChild[index].name.Contains(BTN_TAIL_DIS))//按钮的禁用图
+                        {
+                            SpriteState sprite = btnList[btnIndex].GetComponent<Button>().spriteState;
+                            sprite.disabledSprite = allChild[index].GetComponent<Image>().sprite;
+                            btnList[btnIndex].GetComponent<Button>().spriteState = sprite;
+                            deleteList.Add(tran);
+                        }
+                    }
+                }
+            }
+
+            //delete no use items
+
+            for (int index = 0; index < deleteList.Count; index++)
+            {
+                destroyItem(deleteList[index]);
+            }
+
             AssetDatabase.Refresh();
+        }
+
+
+        //TODO testButton
+        public static void TestClick()
+        {
+
+
+        }
+
+
+        private static void destroyItem(Transform child)
+        {
+            if (child != null)
+                GameObject.DestroyImmediate(child.gameObject);
         }
 
         /// <summary>
@@ -348,7 +522,7 @@
         /// <param name="layer">The layer to export.</param>
         private static void ExportLayer(Layer layer)
         {
-            layer.Name = MakeNameSafe(layer.Name);
+            updateLayerName(layer, MakeNameSafe(layer.Name));
             if (layer.Children.Count > 0 || layer.Rect.width == 0)
             {
                 ExportFolderLayer(layer);
@@ -365,9 +539,10 @@
         /// <param name="layer">The layer that is a folder.</param>
         private static void ExportFolderLayer(Layer layer)
         {
-            if (layer.Name.ContainsIgnoreCase("|Button"))
+            //Debug.Log(Time.time + "read layerName=" + layer.Name+",hasBtn?"+(layer.Name.IndexOf(BTN_HEAD))+",has?"+ (layer.Name.ContainsIgnoreCase(BTN_HEAD)));
+            if (layer.Name.ContainsIgnoreCase(BTN_HEAD))
             {
-                layer.Name = layer.Name.ReplaceIgnoreCase("|Button", string.Empty);
+                updateLayerName(layer, layer.Name.ReplaceIgnoreCase(BTN_HEAD, string.Empty));
 
                 if (UseUnityUI)
                 {
@@ -380,13 +555,13 @@
             }
             else if (layer.Name.ContainsIgnoreCase("|Animation"))
             {
-                layer.Name = layer.Name.ReplaceIgnoreCase("|Animation", string.Empty);
+                updateLayerName(layer, layer.Name.ReplaceIgnoreCase("|Animation", string.Empty));
 
                 string oldPath = currentPath;
                 GameObject oldGroupObject = currentGroupGameObject;
 
-                currentPath = Path.Combine(currentPath, layer.Name.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries)[0]);
-                Directory.CreateDirectory(currentPath);
+                //currentPath = Path.Combine(currentPath, layer.Name.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries)[0]);
+                createDic(currentPath);
 
                 if (UseUnityUI)
                 {
@@ -406,13 +581,19 @@
                 string oldPath = currentPath;
                 GameObject oldGroupObject = currentGroupGameObject;
 
-                currentPath = Path.Combine(currentPath, layer.Name);
-                Directory.CreateDirectory(currentPath);
+                //       currentPath = Path.Combine(currentPath, layer.Name);
+                createDic(currentPath);
 
                 if (LayoutInScene || CreatePrefab)
                 {
-                    currentGroupGameObject = new GameObject(layer.Name);
+                    currentGroupGameObject = CreateObj(layer.Name);
+
+#if UNITY_5
+                    updateParent(currentGroupGameObject, oldGroupObject);
+#else
                     currentGroupGameObject.transform.parent = oldGroupObject.transform;
+#endif
+
                 }
 
                 ExportTree(layer.Children);
@@ -420,6 +601,11 @@
                 currentPath = oldPath;
                 currentGroupGameObject = oldGroupObject;
             }
+        }
+
+        private static void createDic(string path)
+        {
+            Directory.CreateDirectory(path);
         }
 
         /// <summary>
@@ -461,6 +647,8 @@
             return sb.ToString();
         }
 
+        //避免层级重名导致不能导出同名的图片啊！
+        private static List<string> createdNameList;
         /// <summary>
         /// Exports an art layer as an image file and sprite.  It can also generate text meshes from text layers.
         /// </summary>
@@ -483,8 +671,13 @@
                 }
                 else
                 {
+                    //if(createdNameList.Contains(layer.Name))
+                    //{
+                    //    layer.Name = layer.Name + "_new_" + createdNameList.Count;
+                    //}
                     // it is not being laid out in the scene, so simply save out the .png file
                     CreatePNG(layer);
+                    //createdNameList.Add(layer.Name);
                 }
             }
             else
@@ -519,12 +712,46 @@
                 // decode the layer into a texture
                 Texture2D texture = ImageDecoder.DecodeImage(layer);
 
-                file = Path.Combine(currentPath, layer.Name + ".png");
+                string writePath = currentPath;
+                string layerName = trimSpecialHead(layer.Name);
+
+                if (layerName.Contains(PUBLIC_IMG_HEAD))//公用资源
+                {
+                    writePath = writePath .Substring(0, writePath.LastIndexOf(@"\"));//.Replace(rootPsdGameObject.name, "");// writePath.Substring(0, writePath.LastIndexOf(@"\"));
+                    writePath += PUBLIC_IMG_PATH;
+                }
+
+                //output path not exist, create one
+                if (!Directory.Exists(writePath))
+                {
+                    Directory.CreateDirectory(writePath);
+                }
+               
+                //在相对目录下统一放图片
+                file = Path.Combine(writePath, layerName + ".png");
+
+                //pubilc_1234
+                //Debug.Log(Time.time + ",file path=" + file +
+                //    "\n,layernName=" + layerName +
+                //    "\n,hasHead?" + layerName.Contains(PUBLIC_IMG_HEAD) +
+                //    "\n,hasHead?" + layerName.Contains("public") +
+                //    "\n.currentPath=" + currentPath +
+                //    "\n,psdName=" + rootPsdGameObject.name +
+                //    "\n,writePath=" + writePath +
+                //    "\n,writePath=" + writePath);
 
                 File.WriteAllBytes(file, texture.EncodeToPNG());
             }
 
             return file;
+        }
+
+        private  static string trimSpecialHead(string str)
+        {
+            if (str.IndexOf(BTN_HEAD) == 0)
+                return str.Replace(BTN_HEAD, "");
+
+            return str;
         }
 
         /// <summary>
@@ -599,13 +826,13 @@
             float width = layer.Rect.width / PixelsToUnits;
             float height = layer.Rect.height / PixelsToUnits;
 
-            GameObject gameObject = new GameObject(layer.Name);
-            gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+            GameObject gameObject = CreateObj(layer.Name);
+            updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
             gameObject.transform.parent = currentGroupGameObject.transform;
 
             currentDepth -= depthStep;
 
-            Font font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            Font font = Resources.GetBuiltinResource<Font>(textFont);
 
             MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
             meshRenderer.material = font.material;
@@ -644,9 +871,8 @@
             y = (CanvasSize.y / PixelsToUnits) - y;
             float width = layer.Rect.width / PixelsToUnits;
             float height = layer.Rect.height / PixelsToUnits;
-
-            GameObject gameObject = new GameObject(layer.Name);
-            gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+            GameObject gameObject = CreateObj(layer.Name);
+            updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
             gameObject.transform.parent = currentGroupGameObject.transform;
 
             currentDepth -= depthStep;
@@ -654,6 +880,20 @@
             SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = CreateSprite(layer);
             return spriteRenderer;
+        }
+
+        private static void updateRectPosition(GameObject rect, Vector3 position, bool isRoot = false)
+        {
+            rect.GetComponent<RectTransform>().anchoredPosition3D = position;
+            //showLog(",update rect=" + rect.name + ",position=" + position + ",isRoot?" + isRoot +
+            //    ",parentisRoot?" + ((rect.transform.parent == rootPsdGameObject.transform)));
+        }
+
+        private static GameObject CreateObj(string objName)
+        {
+            GameObject obj = new GameObject(objName);
+            obj.AddComponent<RectTransform>();
+            return obj;
         }
 
         /// <summary>
@@ -671,7 +911,7 @@
             {
                 if (arg.ContainsIgnoreCase("FPS="))
                 {
-                    layer.Name = layer.Name.Replace("|" + arg, string.Empty);
+                    updateLayerName(layer, layer.Name.Replace("|" + arg, string.Empty));
 
                     string[] fpsArgs = arg.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
                     if (!float.TryParse(fpsArgs[1], out fps))
@@ -781,32 +1021,56 @@
         {
             if (!GameObject.Find("EventSystem"))
             {
-                GameObject gameObject = new GameObject("EventSystem");
+                GameObject gameObject = CreateObj("EventSystem");
                 gameObject.AddComponent<EventSystem>();
                 gameObject.AddComponent<StandaloneInputModule>();
-                gameObject.AddComponent<TouchInputModule>();
+                //gameObject.AddComponent<TouchInputModule>();
             }
         }
 
         /// <summary>
-        /// Creates a Unity UI <see cref="Canvas"/>.
+        /// Creates a Unity UI <see cref="canvasObj"/>.
         /// </summary>
         private static void CreateUICanvas()
         {
-            Canvas = new GameObject(PsdName);
+            //CanvasComRoot;
+            //Canvas = CreateObj(PsdName);
+            if (GameObject.Find("Canvas") != null)
+            {
+                canvasObj = GameObject.Find("Canvas");
+            }
+            else
+            {
+                canvasObj = CreateObj("Canvas");
+            }
 
-            Canvas canvas = Canvas.AddComponent<Canvas>();
+            Canvas canvas = canvasObj.GetComponent<Canvas>();
+            if (canvas == null)
+                canvas = canvasObj.AddComponent<Canvas>();
+
+            CanvasScaler scaler = canvasObj.GetComponent<CanvasScaler>();
+            if (scaler == null)
+                scaler = canvasObj.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = ScreenResolution;
+
+#if UNITY_5
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.pixelPerfect = true;
+
+#else
             canvas.renderMode = RenderMode.WorldSpace;
+#endif
 
-            RectTransform transform = Canvas.GetComponent<RectTransform>();
-            Vector2 scaledCanvasSize = new Vector2(CanvasSize.x / PixelsToUnits, CanvasSize.y / PixelsToUnits);
-            transform.sizeDelta = scaledCanvasSize;
+            RectTransform transform = canvasObj.GetComponent<RectTransform>();
+            updateRectSize(ref transform, CanvasSize.x / PixelsToUnits, CanvasSize.y / PixelsToUnits);
 
-            CanvasScaler scaler = Canvas.AddComponent<CanvasScaler>();
             scaler.dynamicPixelsPerUnit = PixelsToUnits;
             scaler.referencePixelsPerUnit = PixelsToUnits;
 
-            Canvas.AddComponent<GraphicRaycaster>();
+            GraphicRaycaster racaster = canvasObj.GetComponent<GraphicRaycaster>();
+            if (racaster == null)
+                racaster = canvasObj.AddComponent<GraphicRaycaster>();
         }
 
         /// <summary>
@@ -829,22 +1093,35 @@
             float width = layer.Rect.width / PixelsToUnits;
             float height = layer.Rect.height / PixelsToUnits;
 
-            GameObject gameObject = new GameObject(layer.Name);
-            gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+            GameObject gameObject = CreateObj(layer.Name);
+            updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
+
+#if UNITY_5
+            updateParent(gameObject, currentGroupGameObject);
+#else
             gameObject.transform.parent = currentGroupGameObject.transform;
+#endif
 
             // if the current group object actually has a position (not a normal Photoshop folder layer), then offset the position accordingly
-            gameObject.transform.position = new Vector3(gameObject.transform.position.x + currentGroupGameObject.transform.position.x, gameObject.transform.position.y + currentGroupGameObject.transform.position.y, gameObject.transform.position.z);
+            updateRectPosition(gameObject, new Vector3(gameObject.transform.position.x + currentGroupGameObject.transform.position.x,
+                gameObject.transform.position.y + currentGroupGameObject.transform.position.y, gameObject.transform.position.z));
 
             currentDepth -= depthStep;
 
             Image image = gameObject.AddComponent<Image>();
             image.sprite = CreateSprite(layer);
+            image.raycastTarget = false; //can not click Image by yanru 2016-06-16 19:26:55
 
             RectTransform transform = gameObject.GetComponent<RectTransform>();
-            transform.sizeDelta = new Vector2(width, height);
-
+            updateRectSize(ref transform, width, height);
+          
             return image;
+        }
+
+        private static void updateRectSize(ref RectTransform transform, float width, float height)
+        {
+            //Debug.Log(Time.time + ",update rect size tran="+transform.name+", with = " + width + ",height=" + height + ",PixelsToUnits=" + PixelsToUnits + ",pre=" + (width * PixelsToUnits));
+            transform.sizeDelta = new Vector2(width, height);
         }
 
         /// <summary>
@@ -868,18 +1145,28 @@
             float width = layer.Rect.width / PixelsToUnits;
             float height = layer.Rect.height / PixelsToUnits;
 
-            GameObject gameObject = new GameObject(layer.Name);
-            gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+            GameObject gameObject = CreateObj(layer.Name);
+            updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
+
+#if UNITY_5
+            updateParent(gameObject, currentGroupGameObject);
+#else
             gameObject.transform.parent = currentGroupGameObject.transform;
+#endif 
 
             currentDepth -= depthStep;
 
-            Font font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            Font font = Resources.GetBuiltinResource<Font>(textFont);
 
             Text textUI = gameObject.AddComponent<Text>();
+
+            //showLog("update text=" + gameObject.name + ",set text=" + layer.Text);
+
             textUI.text = layer.Text;
             textUI.font = font;
+            textUI.verticalOverflow = VerticalWrapMode.Overflow;
             textUI.rectTransform.sizeDelta = new Vector2(width, height);
+            textUI.raycastTarget = false;//can not  click text by yanru 2016-06-16 19:27:41
 
             float fontSize = layer.FontSize / PixelsToUnits;
             float ceiling = Mathf.Ceil(fontSize);
@@ -889,7 +1176,9 @@
                 float scaleFactor = ceiling / fontSize;
                 textUI.fontSize = (int)ceiling;
                 textUI.rectTransform.sizeDelta *= scaleFactor;
-                textUI.rectTransform.localScale /= scaleFactor;
+
+                //Debug.Log(Time.time + "set txt=" + textUI.name + ",scale=" + textUI.rectTransform.localScale / scaleFactor + ",factor=" + scaleFactor);
+                updateRectScale(textUI, textUI.rectTransform.localScale / scaleFactor);
             }
             else
             {
@@ -913,6 +1202,17 @@
             }
         }
 
+        private static void updateParent(GameObject gameObject, GameObject father)
+        {
+            gameObject.transform.SetParent(father.transform);
+            gameObject.transform.localScale = Vector3.one;
+        }
+
+        private static void updateRectScale(Text textUI, Vector3 newScale)
+        {
+            textUI.rectTransform.localScale = newScale;
+        }
+
         /// <summary>
         /// Creates a <see cref="UnityEngine.UI.Button"/> from the given <see cref="Layer"/>.
         /// </summary>
@@ -921,24 +1221,17 @@
         {
             // create an empty Image object with a Button behavior attached
             Image image = CreateUIImage(layer);
+
+            
+            /**
             Button button = image.gameObject.AddComponent<Button>();
-
-            // look through the children for a clip rect
-            ////Rectangle? clipRect = null;
-            ////foreach (Layer child in layer.Children)
-            ////{
-            ////    if (child.Name.ContainsIgnoreCase("|ClipRect"))
-            ////    {
-            ////        clipRect = child.Rect;
-            ////    }
-            ////}
-
+             
             // look through the children for the sprite states
             foreach (Layer child in layer.Children)
             {
                 if (child.Name.ContainsIgnoreCase("|Disabled"))
                 {
-                    child.Name = child.Name.ReplaceIgnoreCase("|Disabled", string.Empty);
+                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Disabled", string.Empty));
                     button.transition = Selectable.Transition.SpriteSwap;
 
                     SpriteState spriteState = button.spriteState;
@@ -947,7 +1240,7 @@
                 }
                 else if (child.Name.ContainsIgnoreCase("|Highlighted"))
                 {
-                    child.Name = child.Name.ReplaceIgnoreCase("|Highlighted", string.Empty);
+                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Highlighted", string.Empty));
                     button.transition = Selectable.Transition.SpriteSwap;
 
                     SpriteState spriteState = button.spriteState;
@@ -956,7 +1249,7 @@
                 }
                 else if (child.Name.ContainsIgnoreCase("|Pressed"))
                 {
-                    child.Name = child.Name.ReplaceIgnoreCase("|Pressed", string.Empty);
+                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Pressed", string.Empty));
                     button.transition = Selectable.Transition.SpriteSwap;
 
                     SpriteState spriteState = button.spriteState;
@@ -968,10 +1261,10 @@
                          child.Name.ContainsIgnoreCase("|Normal") ||
                          child.Name.ContainsIgnoreCase("|Up"))
                 {
-                    child.Name = child.Name.ReplaceIgnoreCase("|Default", string.Empty);
-                    child.Name = child.Name.ReplaceIgnoreCase("|Enabled", string.Empty);
-                    child.Name = child.Name.ReplaceIgnoreCase("|Normal", string.Empty);
-                    child.Name = child.Name.ReplaceIgnoreCase("|Up", string.Empty);
+                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Default", string.Empty));
+                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Enabled", string.Empty));
+                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Normal", string.Empty));
+                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Up", string.Empty));
 
                     image.sprite = CreateSprite(child);
 
@@ -988,16 +1281,17 @@
                     float width = child.Rect.width / PixelsToUnits;
                     float height = child.Rect.height / PixelsToUnits;
 
-                    image.gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+                    Debug.Log(Time.time + ",canvasSize=" + CanvasSize + ",child rect.x=" + child.Rect.width + ",height=" + child.Rect.height);
+                    updateRectPosition(image.gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
 
-                    RectTransform transform = image.gameObject.GetComponent<RectTransform>();
-                    transform.sizeDelta = new Vector2(width, height);
+                    RectTransform transform = image.GetComponent<RectTransform>();
+                    updateRectSize(ref transform, width, height);
 
                     button.targetGraphic = image;
                 }
                 else if (child.Name.ContainsIgnoreCase("|Text") && !child.IsTextLayer)
                 {
-                    child.Name = child.Name.ReplaceIgnoreCase("|Text", string.Empty);
+                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Text", string.Empty));
 
                     GameObject oldGroupObject = currentGroupGameObject;
                     currentGroupGameObject = button.gameObject;
@@ -1010,10 +1304,36 @@
 
                 if (child.IsTextLayer)
                 {
+
                     // TODO: Create a child text game object
                 }
             }
+            **/
         }
+         
+        private static void updateLayerName(Layer child, string newName)
+        {
+            string layerInfo = "";
+            //if(createdNameList.Contains(newName))
+            //{
+            //    Debug.Log(Time.time + "set child newName=" + newName + 
+            //        ",该name已经存在！重命名=" + (newName + createdNameList.Count)+
+            //        ",flags="+ layerInfo);
+            //}
+            child.Name = newName;
+
+           //Debug.Log(Time.time + "set child newName=" + newName+
+           //    ",pos="+child.Rect.position +
+           //         ",flags=" + layerInfo);
+
+            createdNameList.Add(newName);
+        }
+
+        private static void  showLog(string str)
+        {
+            Debug.Log(Time.time + ":"+str);
+        }
+
         #endregion
     }
 }
