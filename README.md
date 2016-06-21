@@ -40,26 +40,15 @@ Special Tags
 ==========
 Layers can have special tags applied to them that flags them to have the layout tool perform special operations on them.
 
-### Group Layer Tags ###
-
-|        Tag        | Description |
-| ----------------- | ----------- |
-|  &#124;Animation  |  Creates a Sprite animation using all of the children layers as frames |
-|  &#124;FPS=##     |  The number of frames per second to use for a Sprite animation.  Defaults to 30 if not present  | 
-|  &#124;Button     |  Creates a Button object using any tagged children layers as the button states |
+following keywords with test image named 'aaa':
 
 ### Art Layer Tags ###
 
-|        Tag          | Description |
+|       Head Keyword          | Description |
 | -----------------   | ----------- |
-|  &#124;Disabled     |  Represents the disabled state of a button     |
-|  &#124;Highlighted  |  Represents the highlighted state of a button  | 
-|  &#124;Pressed      |  Represents the pressed state of a button  | 
-|  &#124;Default      |  Represents the default/enabled/normal/up state of a button  | 
-|  &#124;Enabled      |  Represents the default/enabled/normal/up state of a button  |
-|  &#124;Normal       |  Represents the default/enabled/normal/up state of a button  |
-|  &#124;Up           |  Represents the default/enabled/normal/up state of a button  |
-|  &#124;Text         |  Represents a **texture** that is the text of a button (normal text layers import without this tag)  |
+|  &#124;btn_aaa    |  normal texture of button aaa     |
+|  &#124;_highlight  |  clicked texture of button aaa  | 
+|  &#124;_disable  |  disabled texture of button aaa  |  
 
 Photoshop Compatibility
 =======================

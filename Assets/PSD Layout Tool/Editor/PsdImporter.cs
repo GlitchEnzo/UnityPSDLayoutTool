@@ -714,7 +714,11 @@
 
                 if (layerName.Contains(PUBLIC_IMG_HEAD))//common images
                 {
-                    writePath = writePath .Substring(0, writePath.LastIndexOf(@"\"));//.Replace(rootPsdGameObject.name, "");// writePath.Substring(0, writePath.LastIndexOf(@"\"));
+                    int length = writePath.Length - 1;
+                    if (writePath.LastIndexOf(@"\") != -1)
+                        length = writePath.LastIndexOf(@"\");
+
+                    writePath = writePath.Substring(0, length);
                     writePath += PUBLIC_IMG_PATH;
                 }
 
@@ -723,7 +727,7 @@
                 {
                     Directory.CreateDirectory(writePath);
                 }
-               
+
                 file = Path.Combine(writePath, layerName + ".png");
 
                 File.WriteAllBytes(file, texture.EncodeToPNG());
