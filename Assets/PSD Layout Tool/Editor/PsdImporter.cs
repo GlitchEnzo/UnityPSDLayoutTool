@@ -13,6 +13,8 @@
     using UnityEngine.EventSystems;
     using UnityEngine.UI;
 
+	
+	
     /// <summary>
     /// Handles all of the importing for a PSD file (exporting textures, creating prefabs, etc).
     /// </summary>
