@@ -1,7 +1,7 @@
 ﻿namespace PhotoshopFile
 {
     using System.IO;
-
+    using UnityEngine;
     /// <summary>
     /// The adjustment information for a layer
     /// </summary>
@@ -25,8 +25,13 @@
                 layer.HasEffects = true;
             }
 
-            uint length = reader.ReadUInt32();
-            Data = reader.ReadBytes((int)length);
+            //int readlength = byte.MaxValue;
+             uint length = reader.ReadUInt32();
+            Data = reader.ReadBytes(  (int)length);
+
+            //string Stringdata = "";// new string(reader.ReadChars(4));
+
+            //Debug.Log(Time.time + ",new AdjustmentLayerInfo key=" + Key +",strdata="+Stringdata);
         }
 
         /// <summary>

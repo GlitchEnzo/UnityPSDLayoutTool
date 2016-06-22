@@ -98,6 +98,11 @@
                         PsdImporter.LayoutInCurrentScene(assetPath);
                     }
 
+                    if (GUILayout.Button("Layout in Current Scene(use image real size)"))
+                    {
+                        PsdImporter.LayoutInCurrentScene(assetPath,true );
+                    }
+
                     if (GUILayout.Button("Generate Prefab"))
                     {
                         PsdImporter.GeneratePrefab(assetPath);

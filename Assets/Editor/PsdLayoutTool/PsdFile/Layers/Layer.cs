@@ -119,7 +119,6 @@
 
             foreach (AdjustmentLayerInfo adjustmentLayerInfo in AdjustmentInfo)
             {
-                key += adjustmentLayerInfo.Key + ",";
                 if (adjustmentLayerInfo.Key == "TySh")
                 {
                     ReadTextLayer(adjustmentLayerInfo.DataReader);
@@ -133,13 +132,11 @@
                     Name = dataReader.ReadString().TrimEnd(new char[1]);
                 }
             }
-            //key += "\n";
-            //Debug.Log(Time.time + ",read key=\n" + key);
-
+           
             reader.BaseStream.Position = num4;
         }
 
-        static string key = "";
+       
 
         #region Properties
 
@@ -269,7 +266,8 @@
         private void ReadTextLayer(BinaryReverseReader dataReader)
         {
             IsTextLayer = true;
-            //    read the text layer's text string
+            
+            // read the text layer's text string
             dataReader.Seek("/Text");
             dataReader.ReadBytes(4);
             Text = dataReader.ReadString();
@@ -321,7 +319,7 @@
                 string str = WarpStyle + dataReader.ReadChar();
                 WarpStyle = str;
             }
-            Debug.Log(Time.time + "text=" + Text + ",color=" + FillColor + ",Version5OrLaterBit=" + Version5OrLaterBit);
+            //Debug.Log(Time.time + "new text=" + Text + ",color=" + FillColor + ",Version5OrLaterBit=" + Version5OrLaterBit);
         }
     }
 }

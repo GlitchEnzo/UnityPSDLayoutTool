@@ -44,7 +44,7 @@
         //    get { return currentPath; }
         //    set { currentPath = value; }
 
-        private const string TEST_FONT_NAME = "FandoHei";
+        private const string TEST_FONT_NAME = "FandolHei";
         //}
         /// <summary>
         /// The <see cref="GameObject"/> representing the root PSD layer.  It contains all of the other layers as children GameObjects.
@@ -132,6 +132,8 @@
 
         private static string _textFont = "";
 
+
+        private static bool _useRealImageSize = false;
         /// <summary>
         /// force use font
         /// </summary>
@@ -159,7 +161,9 @@
             get { return _fullScreenUI; }
             set { _fullScreenUI = value; }
         }
-         
+
+        private static Dictionary<GameObject, Vector3> _positionDic;
+
         /// <summary>
         /// Gets or sets the current <see cref="PsdFile"/> that is being imported.
         /// </summary>
@@ -180,10 +184,12 @@
         /// Lays out sprites in the current scene to match the PSD's layout.  Each layer is exported as Sprite-type textures in the project's assets.
         /// </summary>
         /// <param name="assetPath">The path of to the .psd file relative to the project.</param>
-        public static void LayoutInCurrentScene(string assetPath)
+        public static void LayoutInCurrentScene(string assetPath,bool useCurImageSize = false)
         {
             LayoutInScene = true;
             CreatePrefab = false;
+            _useRealImageSize = useCurImageSize;
+
             Import(assetPath);
         }
 
@@ -198,15 +204,14 @@
             Import(assetPath);
         }
 
-        private static Dictionary<GameObject, Layer> _layerDic;
-
         /// <summary>
         /// Imports a Photoshop document (.psd) file at the given path.
         /// </summary>
         /// <param name="asset">The path of to the .psd file relative to the project.</param>
         private static void Import(string asset)
         {
-            _layerDic = new Dictionary<GameObject, Layer>();
+            _positionDic = new Dictionary<GameObject, Vector3>();
+
             currentDepth = MaximumDepth;
             string fullPath = Path.Combine(GetFullProjectPath(), asset.Replace('\\', '/'));
 
@@ -234,7 +239,7 @@
 
                 //create ui Root
                 rootPsdGameObject = CreateObj(PsdName);
-                updateParent(rootPsdGameObject, canvasObj);
+                updateItemParent(rootPsdGameObject, canvasObj);
 
                 //if (fullScreenUI)
                 {
@@ -257,12 +262,6 @@
             {
                 UnityEngine.Object prefab = PrefabUtility.CreateEmptyPrefab(asset.Replace(".psd", ".prefab"));
                 PrefabUtility.ReplacePrefab(rootPsdGameObject, prefab);
-
-                //if (!LayoutInScene)
-                //{
-                //    // if we are not flagged to layout in the scene, delete the GameObject used to generate the prefab
-                //    UnityEngine.Object.DestroyImmediate(rootPsdGameObject);
-                //}
             }
 
             //all ui items created, update components
@@ -270,7 +269,8 @@
             {
                 return;
             }
-                Debug.Log(Time.time + ",dealUI=" + rootPsdGameObject.name + ",finish");
+
+            Debug.Log(Time.time + ",dealUI=" + rootPsdGameObject.name + ",finish");
             
 
             int childCount = rootPsdGameObject.transform.childCount;
@@ -280,13 +280,7 @@
                 tran.position += new Vector3(ScreenResolution.x / 2f, ScreenResolution.y / 2f, 0);
             }
 
-            //刷新文本啊
-            List<GameObject> keyList = new List<GameObject>(_layerDic.Keys);
-            for(int index=0;index< keyList.Count;index ++)
-            {
-                keyList[index].GetComponent<Text>().color = _layerDic[keyList[index]].FillColor;
-            }
-
+            
             Dictionary<Transform, bool> _dealDic = new Dictionary<Transform, bool>(); //flag if item will be deleted
 
             List<Transform> btnList = new List<Transform>();
@@ -313,30 +307,33 @@
                     Transform tran = allChild[index];
 
                     //update image sprite deltaSize and PNG attribute
-                    Image image = tran.GetComponent<Image>();
-                    if (image != null && image.sprite != null)
+                    if (_useRealImageSize == false)
                     {
-                        string spriteName = image.sprite.name;
-
-                        //match str end with number_number,will used as sliced Image
-                        string str1 = spriteName; // "4343434";// "testrewer_4_3";
-                        Regex reg = new Regex(@"\d+[_]\d+$");
-                        Match match = reg.Match(str1);
-                        if (match.ToString() != "")
+                        Image image = tran.GetComponent<Image>();
+                        if (image != null && image.sprite != null)
                         {
-                            string[] size = reg.Match(str1).ToString().Split('_');
-                            int width = Convert.ToInt32(size[0]);
-                            int height = Convert.ToInt32(size[0]);
-                            image.GetComponent<RectTransform>().sizeDelta = new Vector2(width, height);
-                            image.type = Image.Type.Sliced;
+                            string spriteName = image.sprite.name;
 
-                            if (image.sprite.border == Vector4.zero)
+                            //match str end with number_number,will used as sliced Image
+                            string str1 = spriteName; // "4343434";// "testrewer_4_3";
+                            Regex reg = new Regex(@"\d+[_]\d+$");
+                            Match match = reg.Match(str1);
+                            if (match.ToString() != "")
                             {
-                                Debug.LogError(Time.time + "need to set png=" + image.sprite.name + ",slice border");
+                                string[] size = reg.Match(str1).ToString().Split('_');
+                                int width = Convert.ToInt32(size[0]);
+                                int height = Convert.ToInt32(size[0]);
+                                image.GetComponent<RectTransform>().sizeDelta = new Vector2(width, height);
+                                image.type = Image.Type.Sliced;
+
+                                if (image.sprite.border == Vector4.zero)
+                                {
+                                    Debug.LogError(Time.time + "need to set png=" + image.sprite.name + ",slice border");
+                                }
                             }
                         }
                     }
-
+                
                     if (allChild[index].name.IndexOf(btnName) == 0)
                     {
                         if (allChild[index].name.Contains(BTN_TAIL_HIGH))//button highlight image
@@ -612,7 +609,7 @@
                     currentGroupGameObject = CreateObj(layer.Name);
 
 #if UNITY_5
-                    updateParent(currentGroupGameObject, oldGroupObject);
+                    updateItemParent(currentGroupGameObject, oldGroupObject);
 #else
                     currentGroupGameObject.transform.parent = oldGroupObject.transform;
 #endif
@@ -898,9 +895,11 @@
 
         private static void updateRectPosition(GameObject rect, Vector3 position, bool isRoot = false)
         {
-            rect.GetComponent<RectTransform>().anchoredPosition3D = position;
-            //showLog(",update rect=" + rect.name + ",position=" + position + ",isRoot?" + isRoot +
-            //    ",parentisRoot?" + ((rect.transform.parent == rootPsdGameObject.transform)));
+            rect.GetComponent<RectTransform>().anchoredPosition = position; 
+            _positionDic[rect] = position;
+
+            showLog(",update rect=" + rect.name + ",position=" + position + ",isRoot?" + isRoot +
+                ",parentisRoot?" + ((rect.transform.parent == rootPsdGameObject.transform)));
         }
 
         private static GameObject CreateObj(string objName)
@@ -1111,7 +1110,7 @@
             updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
 
 #if UNITY_5
-            updateParent(gameObject, currentGroupGameObject);
+            updateItemParent(gameObject, currentGroupGameObject);
 #else
             gameObject.transform.parent = currentGroupGameObject.transform;
 #endif
@@ -1160,13 +1159,13 @@
             float height = layer.Rect.height / PixelsToUnits;
 
             GameObject gameObject = CreateObj(layer.Name);
-            updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
-
 #if UNITY_5
-            updateParent(gameObject, currentGroupGameObject);
+            updateItemParent(gameObject, currentGroupGameObject);
 #else
             gameObject.transform.parent = currentGroupGameObject.transform;
-#endif 
+#endif
+
+            updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
 
             currentDepth -= depthStep;
 
@@ -1207,8 +1206,6 @@
             textUI.alignment = TextAnchor.MiddleCenter;
 
 
-            Debug.Log(Time.time + ",update txt=" + textUI.name + ",color=" + layer.FillColor + ",color=" + color);
-
             switch (layer.Justification)
             {
                 case TextJustification.Left:
@@ -1221,7 +1218,6 @@
                     textUI.alignment = TextAnchor.MiddleCenter;
                     break;
             }
-            _layerDic.Add(gameObject, layer);
         }
 
         private static Font getFontInfo()
@@ -1239,7 +1235,7 @@
             return font;
         }
 
-        private static void updateParent(GameObject gameObject, GameObject father)
+        private static void updateItemParent(GameObject gameObject, GameObject father)
         {
             gameObject.transform.SetParent(father.transform);
             gameObject.transform.localScale = Vector3.one;
@@ -1259,7 +1255,6 @@
             // create an empty Image object with a Button behavior attached
             Image image = CreateUIImage(layer);
 
-            
             /**
             Button button = image.gameObject.AddComponent<Button>();
              

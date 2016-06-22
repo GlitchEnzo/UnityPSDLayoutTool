@@ -46,9 +46,9 @@ following keywords with test image named 'aaa':
 
 |       Head Keyword          | Description |
 | -----------------   | ----------- |
-|  &#124;btn_aaa    |  normal texture of button aaa     |
-|  &#124;_highlight  |  clicked texture of button aaa  | 
-|  &#124;_disable  |  disabled texture of button aaa  |  
+|  btn_aaa    |  normal texture of button aaa     |
+|  _highlight  |  clicked texture of button aaa  | 
+|  _disable  |  disabled texture of button aaa  |  
 
 Photoshop Compatibility
 =======================
