@@ -6,7 +6,7 @@
     using System.Linq;
     using System.Xml;
     using System.Xml.Linq;
-
+    using UnityEngine;
     /// <summary>
     /// A class that represents a loaded PSD file.
     /// </summary>
@@ -141,7 +141,9 @@
         /// <param name="reader">The reader containing the PSD file data</param>
         private void LoadHeader(BinaryReverseReader reader)
         {
-            if (new string(reader.ReadChars(4)) != "8BPS")
+            string strHead = new string(reader.ReadChars(4));
+            Debug.Log(Time.time+ "read strHead="+ strHead);
+            if (strHead != "8BPS")
             {
                 UnityEngine.Debug.LogError("The given stream is not a valid PSD file");
                 throw new IOException("The given stream is not a valid PSD file");

@@ -25,7 +25,7 @@
         public const string BTN_TAIL_HIGH = "_highlight";   //button highilght image keyward
         public const string BTN_TAIL_DIS = "_disable";      //buttno disable image keyword
 
-        public const string TEXT_HEAD = "text_";            //text keyword
+        //public const string TEXT_HEAD = "text_";            //text keyword
 
         public const string PUBLIC_IMG_HEAD = "public_";    //public images that more than one UI may use
 
@@ -43,6 +43,8 @@
         //{
         //    get { return currentPath; }
         //    set { currentPath = value; }
+
+        private const string TEST_FONT_NAME = "FandoHei";
         //}
         /// <summary>
         /// The <see cref="GameObject"/> representing the root PSD layer.  It contains all of the other layers as children GameObjects.
@@ -70,6 +72,8 @@
         /// </summary>
         static PsdImporter()
         {
+            textFont = TEST_FONT_NAME;//.otf";//yanru测试字体
+
             MaximumDepth = 1;
             PixelsToUnits = 1;
         }
@@ -126,11 +130,12 @@
         public static Vector2 ScreenResolution = new Vector2(1280, 760);
 
 
+        private static string _textFont = "";
+
         /// <summary>
         /// force use font
         /// </summary>
         /// 
-        private static string _textFont = "";
         public static string textFont
         {
             get
@@ -193,12 +198,15 @@
             Import(assetPath);
         }
 
+        private static Dictionary<GameObject, Layer> _layerDic;
+
         /// <summary>
         /// Imports a Photoshop document (.psd) file at the given path.
         /// </summary>
         /// <param name="asset">The path of to the .psd file relative to the project.</param>
         private static void Import(string asset)
         {
+            _layerDic = new Dictionary<GameObject, Layer>();
             currentDepth = MaximumDepth;
             string fullPath = Path.Combine(GetFullProjectPath(), asset.Replace('\\', '/'));
 
@@ -250,15 +258,20 @@
                 UnityEngine.Object prefab = PrefabUtility.CreateEmptyPrefab(asset.Replace(".psd", ".prefab"));
                 PrefabUtility.ReplacePrefab(rootPsdGameObject, prefab);
 
-                if (!LayoutInScene)
-                {
-                    // if we are not flagged to layout in the scene, delete the GameObject used to generate the prefab
-                    UnityEngine.Object.DestroyImmediate(rootPsdGameObject);
-                }
+                //if (!LayoutInScene)
+                //{
+                //    // if we are not flagged to layout in the scene, delete the GameObject used to generate the prefab
+                //    UnityEngine.Object.DestroyImmediate(rootPsdGameObject);
+                //}
             }
 
             //all ui items created, update components
-            Debug.Log(Time.time + ",dealUI=" + rootPsdGameObject.name + ",finish");
+            if (rootPsdGameObject== null)
+            {
+                return;
+            }
+                Debug.Log(Time.time + ",dealUI=" + rootPsdGameObject.name + ",finish");
+            
 
             int childCount = rootPsdGameObject.transform.childCount;
             for (int index = 0; index < childCount; index++)
@@ -267,6 +280,12 @@
                 tran.position += new Vector3(ScreenResolution.x / 2f, ScreenResolution.y / 2f, 0);
             }
 
+            //刷新文本啊
+            List<GameObject> keyList = new List<GameObject>(_layerDic.Keys);
+            for(int index=0;index< keyList.Count;index ++)
+            {
+                keyList[index].GetComponent<Text>().color = _layerDic[keyList[index]].FillColor;
+            }
 
             Dictionary<Transform, bool> _dealDic = new Dictionary<Transform, bool>(); //flag if item will be deleted
 
@@ -352,8 +371,13 @@
         //TODO testButton
         public static void TestClick()
         {
+            if (canvasObj == null)
+                return;
 
-
+            for (int index = 0; index < canvasObj.transform.childCount; index++)
+            {
+                GameObject.Destroy(canvasObj.transform.GetChild(index));
+            }
         }
 
 
@@ -822,7 +846,7 @@
 
             currentDepth -= depthStep;
 
-            Font font = Resources.GetBuiltinResource<Font>(textFont);
+            Font font = getFontInfo();
 
             MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
             meshRenderer.material = font.material;
@@ -1146,9 +1170,13 @@
 
             currentDepth -= depthStep;
 
-            Font font = Resources.GetBuiltinResource<Font>(textFont);
+            Font font = getFontInfo();
 
-            Text textUI = gameObject.AddComponent<Text>();
+            Text textUI = gameObject.GetComponent<Text>();
+            if (textUI == null)
+            {
+                textUI = gameObject.AddComponent<Text>();
+            }
 
             //showLog("update text=" + gameObject.name + ",set text=" + layer.Text);
 
@@ -1178,6 +1206,9 @@
             textUI.color = color;
             textUI.alignment = TextAnchor.MiddleCenter;
 
+
+            Debug.Log(Time.time + ",update txt=" + textUI.name + ",color=" + layer.FillColor + ",color=" + color);
+
             switch (layer.Justification)
             {
                 case TextJustification.Left:
@@ -1190,6 +1221,22 @@
                     textUI.alignment = TextAnchor.MiddleCenter;
                     break;
             }
+            _layerDic.Add(gameObject, layer);
+        }
+
+        private static Font getFontInfo()
+        {
+            Font font = null;
+            
+            if (textFont.Contains(TEST_FONT_NAME))
+            {
+                font = Resources.Load<Font>(textFont);
+            }
+            else
+            {
+                font = Resources.GetBuiltinResource<Font>(textFont);
+            }
+            return font;
         }
 
         private static void updateParent(GameObject gameObject, GameObject father)

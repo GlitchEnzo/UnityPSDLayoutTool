@@ -1,9 +1,10 @@
 ﻿namespace PhotoshopFile
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Text;
-
+    using UnityEngine;
     /// <summary>
     /// Reads primitive data types as binary values in in big-endian format
     /// </summary>
@@ -14,9 +15,16 @@
         /// </summary>
         /// <param name="stream">The stream to read through.</param>
         public BinaryReverseReader(Stream stream)
-            : base(stream, Encoding.UTF7)
+            : base(stream, Encoding.UTF8)//.UTF7)
         {
         }
+
+        //public override byte ReadByte()
+        //{
+        //    byte num = base.ReadByte();
+        //    num = ReverseBytes(num);
+        //    return num;
+        //}
 
         /// <summary>
         /// Reads a 16 bit int (2 bytes) from the stream.
@@ -96,8 +104,7 @@
             {
                 ReadByte();
             }
-
-            return new string(Encoding.ASCII.GetChars(bytes));
+            return new string(Encoding.UTF8.GetChars(bytes));
         }
 
         /// <summary>
@@ -142,24 +149,47 @@
         public override string ReadString()
         {
             string str = string.Empty;
+            List<byte> bytelist = new List<byte>();
+            string strtest = "";
+            string strtest123 = "";
+
             try
             {
+                //strtest123 = BaseStream
                 while (BaseStream.Position < BaseStream.Length)
                 {
-                    if (ReadChar() == 0)
+                    char char1 = ReadChar();
+                    byte char2 = ReadByte();
+
+                    strtest += char2 + ",";
+                    if (char1 == 0)
                     {
-                        str = str + (char)ReadByte();
+                        bytelist.Add(char2);
                     }
                     else
                     {
+                        //Debug.Log(Time.time + ",此时 char2=" + char2);
+                        //Debug.Log(Time.time + ",此时 char1=" + char1);
                         break;
                     }
+
                 }
             }
             catch (ArgumentException)
             {
                 UnityEngine.Debug.LogError("An invalid character was found in the string.");
             }
+
+            byte[] res = new byte[bytelist.Count];
+            for (int index = 0; index < bytelist.Count; index++)
+                res[index] = bytelist[index];
+
+            str = System.Text.Encoding.Default.GetString(res);
+
+            //yanruTODO testlog
+            //if (str.Contains("zhang"))
+            //    Debug.Log(Time.time + "str=" + str + ",test=\n" + strtest + ",strtest123=" + strtest123 +
+            //        ",tostr=\n" + this.ToString());
 
             return str;
         }
@@ -172,7 +202,7 @@
         /// <param name="search">The string to search for.</param>
         public void Seek(string search)
         {
-            byte[] bytes = Encoding.ASCII.GetBytes(search);
+            byte[] bytes = Encoding.UTF8.GetBytes(search);
             Seek(bytes);
         }
 
@@ -188,6 +218,11 @@
         private Int16 ReverseBytes(Int16 value)
         {
             return (Int16)ReverseBytes((UInt16)value);
+        }
+
+        private Byte ReverseBytes(Byte value)
+        {
+            return (Byte)ReverseBytes((Byte)value);
         }
 
         /// <summary>

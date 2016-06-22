@@ -64,11 +64,13 @@
                 {
                     GUILayout.Label("<b>PSD Layout Tool</b>", guiStyle, GUILayout.Height(23));
                      
-                    GUIContent maximumDepthLabel = new GUIContent("Maximum Depth", "The Z value of the far back plane. The PSD will be laid out from here to 0.");
-                    PsdImporter.MaximumDepth = EditorGUILayout.FloatField(maximumDepthLabel, PsdImporter.MaximumDepth);
+                    //All ui depth is the same 1
+                    //GUIContent maximumDepthLabel = new GUIContent("Maximum Depth", "The Z value of the far back plane. The PSD will be laid out from here to 0.");
+                    //PsdImporter.MaximumDepth = EditorGUILayout.FloatField(maximumDepthLabel, PsdImporter.MaximumDepth);
 
-                    GUIContent pixelsToUnitsLabel = new GUIContent("Pixels to Unity Units", "The scale of the Sprite objects, in the number of pixels to Unity world units.");
-                    PsdImporter.PixelsToUnits = EditorGUILayout.FloatField(pixelsToUnitsLabel, PsdImporter.PixelsToUnits);
+                    //modify by yanru
+                    //GUIContent pixelsToUnitsLabel = new GUIContent("Pixels to Unity Units", "The scale of the Sprite objects, in the number of pixels to Unity world units.");
+                    //PsdImporter.PixelsToUnits = EditorGUILayout.FloatField(pixelsToUnitsLabel, PsdImporter.PixelsToUnits);
 
                     //GUIContent useUnityUILabel = new GUIContent("Use Unity UI", "Create Unity UI elements instead of \"normal\" GameObjects.");
                     //PsdImporter.UseUnityUI = EditorGUILayout.Toggle(useUnityUILabel, PsdImporter.UseUnityUI);
@@ -86,10 +88,10 @@
                     PsdImporter.fullScreenUI = EditorGUILayout.Toggle(useFullScreenUI, PsdImporter.fullScreenUI);
 
                     // draw our custom buttons for PSD files
-                    if (GUILayout.Button("Export Layers as Textures"))
-                    {
-                        PsdImporter.ExportLayersAsTextures(assetPath);
-                    }
+                    //if (GUILayout.Button("Export Layers as Textures"))
+                    //{
+                    //    PsdImporter.ExportLayersAsTextures(assetPath);
+                    //}
 
                     if (GUILayout.Button("Layout in Current Scene"))
                     {
@@ -101,7 +103,7 @@
                         PsdImporter.GeneratePrefab(assetPath);
                     }
 
-                    if (GUILayout.Button("测试按钮"))
+                    if (GUILayout.Button("test ClickButton"))
                     {
                         PsdImporter.TestClick();
                     }

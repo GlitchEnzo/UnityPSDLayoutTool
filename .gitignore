@@ -22,3 +22,7 @@ Temp/
 # Ignore the StyleCop files
 Settings.StyleCop
 StyleCop.Cache
+
+Assets/Resources/*
+Assets/Resources/FandoHei.otf
+Assets/Resources/FandoHei.otf.meta

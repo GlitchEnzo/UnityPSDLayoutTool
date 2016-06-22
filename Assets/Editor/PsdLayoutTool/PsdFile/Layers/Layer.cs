@@ -116,8 +116,10 @@
                 }
             }
 
+
             foreach (AdjustmentLayerInfo adjustmentLayerInfo in AdjustmentInfo)
             {
+                key += adjustmentLayerInfo.Key + ",";
                 if (adjustmentLayerInfo.Key == "TySh")
                 {
                     ReadTextLayer(adjustmentLayerInfo.DataReader);
@@ -131,9 +133,13 @@
                     Name = dataReader.ReadString().TrimEnd(new char[1]);
                 }
             }
+            //key += "\n";
+            //Debug.Log(Time.time + ",read key=\n" + key);
 
             reader.BaseStream.Position = num4;
         }
+
+        static string key = "";
 
         #region Properties
 
@@ -263,14 +269,13 @@
         private void ReadTextLayer(BinaryReverseReader dataReader)
         {
             IsTextLayer = true;
-
-            // read the text layer's text string
+            //    read the text layer's text string
             dataReader.Seek("/Text");
             dataReader.ReadBytes(4);
             Text = dataReader.ReadString();
 
-            // read the text justification
-            dataReader.Seek("/Justification ");
+            //  read the text justification
+            dataReader.Seek("/Justification");
             int justification = dataReader.ReadByte() - 48;
             Justification = TextJustification.Left;
             if (justification == 1)
@@ -296,9 +301,9 @@
             float green = dataReader.ReadFloat();
             dataReader.ReadByte();
             float blue = dataReader.ReadFloat();
-            FillColor = new Color(red * byte.MaxValue, green * byte.MaxValue, blue * byte.MaxValue, alpha * byte.MaxValue);
+            FillColor = new Color(red * byte.MaxValue / 255f, green * byte.MaxValue / 255f, blue * byte.MaxValue / 255f, alpha * byte.MaxValue / 255f);
 
-            // read the font name
+            //  read the font name
             dataReader.Seek("/FontSet ");
             dataReader.Seek("/Name");
             dataReader.ReadBytes(4);
@@ -316,6 +321,7 @@
                 string str = WarpStyle + dataReader.ReadChar();
                 WarpStyle = str;
             }
+            Debug.Log(Time.time + "text=" + Text + ",color=" + FillColor + ",Version5OrLaterBit=" + Version5OrLaterBit);
         }
     }
 }
