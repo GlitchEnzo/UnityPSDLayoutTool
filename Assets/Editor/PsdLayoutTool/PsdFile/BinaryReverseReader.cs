@@ -26,6 +26,11 @@
         //    return num;
         //}
 
+        //public override byte[] ReadBytes(int count)
+        //{
+        // return    base.ReadBytes(count);
+        //}
+
         /// <summary>
         /// Reads a 16 bit int (2 bytes) from the stream.
         /// </summary>
@@ -153,9 +158,12 @@
             string strtest = "";
             string strtest123 = "";
 
+            BinaryReader tempStream = new BinaryReader(BaseStream);
+
             try
             {
                 //strtest123 = BaseStream
+                //Debug.Log(Time.time + "BaseStream.Position=" + BaseStream.Position);
                 while (BaseStream.Position < BaseStream.Length)
                 {
                     char char1 = ReadChar();
@@ -186,13 +194,23 @@
 
             str = System.Text.Encoding.Default.GetString(res);
 
-            //yanruTODO testlog
-            //if (str.Contains("zhang"))
-            //    Debug.Log(Time.time + "str=" + str + ",test=\n" + strtest + ",strtest123=" + strtest123 +
-            //        ",tostr=\n" + this.ToString());
+            this.
+            BaseStream.Position = 4;
+
+            //string strtest345 = new string(Encoding.UTF8.GetChars(this.ReadBytes(Convert.ToInt32(BaseStream.Length - BaseStream.Position -1))));
+            //binReader.ReadChars(
+            //         (int)(memStream.Length - memStream.Position)));
+            //tempStream.ReadBytes(Convert.ToInt32(tempStream.BaseStream.Length - tempStream.BaseStream.Position ));
+            ////yanruTODO testlog
+
+            if (str.Contains("zhang"))
+                Debug.Log(Time.time + "str=" + str + ",test=\n" + strtest + ",strtest123=" + strtest123 +
+                    ",length=" + BaseStream.Length+ ", BaseStream.Position=" + BaseStream.Position);
 
             return str;
         }
+
+
 
         /// <summary>
         /// Searches through the stream for the given string.  If found, the position in the stream

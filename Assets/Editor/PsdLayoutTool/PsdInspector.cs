@@ -32,8 +32,10 @@
         /// </summary>
         public void OnEnable()
         {
+
             // use reflection to get the default Inspector
             Type type = Type.GetType("UnityEditor.TextureImporterInspector, UnityEditor");
+
             nativeEditor = CreateEditor(target, type);
 
             // set up the GUI style for the section headers
@@ -45,6 +47,19 @@
             if (Application.HasProLicense())
             {
                 guiStyle.normal.textColor = Color.white;
+            }
+
+
+            TextureImporter import = (TextureImporter)target;
+            if (import.textureType != TextureImporterType.Sprite)
+            {
+                import.textureType = TextureImporterType.Sprite;
+                import.mipmapEnabled = false;
+                import.textureFormat = TextureImporterFormat.RGBA32;
+                import.filterMode = FilterMode.Bilinear;
+                import.SaveAndReimport();
+                import.textureFormat = TextureImporterFormat.AutomaticCompressed;
+                Debug.Log(Time.time + " focuse on cur image forse set Image as Sprite type！");
             }
         }
 
