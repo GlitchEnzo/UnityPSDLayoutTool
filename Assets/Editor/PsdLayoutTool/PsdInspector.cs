@@ -83,9 +83,9 @@
                     GUIContent fontName = new GUIContent("fontName", "use font on UI");
                     PsdImporter.textFont = EditorGUILayout.TextField(fontName, PsdImporter.textFont);
 
-                    //set fullScreenUI
-                    GUIContent useFullScreenUI = new GUIContent("useFullScreenUI", "useFullScreenUI");
-                    PsdImporter.fullScreenUI = EditorGUILayout.Toggle(useFullScreenUI, PsdImporter.fullScreenUI);
+                    //force use fullScreenUI
+                    //GUIContent useFullScreenUI = new GUIContent("useFullScreenUI", "useFullScreenUI");
+                    //PsdImporter.fullScreenUI = EditorGUILayout.Toggle(useFullScreenUI, PsdImporter.fullScreenUI);
 
                     // draw our custom buttons for PSD files
                     //if (GUILayout.Button("Export Layers as Textures"))

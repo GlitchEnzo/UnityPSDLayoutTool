@@ -608,11 +608,7 @@
                 {
                     currentGroupGameObject = CreateObj(layer.Name);
 
-#if UNITY_5
                     updateItemParent(currentGroupGameObject, oldGroupObject);
-#else
-                    currentGroupGameObject.transform.parent = oldGroupObject.transform;
-#endif
 
                 }
 
@@ -839,7 +835,7 @@
 
             GameObject gameObject = CreateObj(layer.Name);
             updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
-            gameObject.transform.parent = currentGroupGameObject.transform;
+            updateItemParent(gameObject, currentGroupGameObject);
 
             currentDepth -= depthStep;
 
@@ -884,7 +880,7 @@
             float height = layer.Rect.height / PixelsToUnits;
             GameObject gameObject = CreateObj(layer.Name);
             updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
-            gameObject.transform.parent = currentGroupGameObject.transform;
+            updateItemParent(gameObject, currentGroupGameObject);
 
             currentDepth -= depthStep;
 
@@ -898,8 +894,8 @@
             rect.GetComponent<RectTransform>().anchoredPosition = position; 
             _positionDic[rect] = position;
 
-            showLog(",update rect=" + rect.name + ",position=" + position + ",isRoot?" + isRoot +
-                ",parentisRoot?" + ((rect.transform.parent == rootPsdGameObject.transform)));
+            //showLog(",update rect=" + rect.name + ",position=" + position + ",isRoot?" + isRoot +
+            //    ",parentisRoot?" + ((rect.transform.parent == rootPsdGameObject.transform)));
         }
 
         private static GameObject CreateObj(string objName)
@@ -1109,11 +1105,7 @@
             GameObject gameObject = CreateObj(layer.Name);
             updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
 
-#if UNITY_5
             updateItemParent(gameObject, currentGroupGameObject);
-#else
-            gameObject.transform.parent = currentGroupGameObject.transform;
-#endif
 
             // if the current group object actually has a position (not a normal Photoshop folder layer), then offset the position accordingly
             updateRectPosition(gameObject, new Vector3(gameObject.transform.position.x + currentGroupGameObject.transform.position.x,
@@ -1159,12 +1151,9 @@
             float height = layer.Rect.height / PixelsToUnits;
 
             GameObject gameObject = CreateObj(layer.Name);
-#if UNITY_5
+ 
             updateItemParent(gameObject, currentGroupGameObject);
-#else
-            gameObject.transform.parent = currentGroupGameObject.transform;
-#endif
-
+ 
             updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
 
             currentDepth -= depthStep;
