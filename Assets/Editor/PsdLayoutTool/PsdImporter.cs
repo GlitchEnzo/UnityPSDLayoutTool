@@ -241,14 +241,12 @@
                 rootPsdGameObject = CreateObj(PsdName);
                 updateItemParent(rootPsdGameObject, canvasObj);
 
-                //if (fullScreenUI)
-                {
-                    RectTransform rectRoot = rootPsdGameObject.GetComponent<RectTransform>();
-                    rectRoot.anchorMin = new Vector2(0, 0);
-                    rectRoot.anchorMax = new Vector2(1, 1);
-                    rectRoot.offsetMin = Vector2.zero;
-                    rectRoot.offsetMax = Vector2.zero;
-                }
+                RectTransform rectRoot = rootPsdGameObject.GetComponent<RectTransform>();
+                rectRoot.anchorMin = new Vector2(0, 0);
+                rectRoot.anchorMax = new Vector2(1, 1);
+                rectRoot.offsetMin = Vector2.zero;
+                rectRoot.offsetMax = Vector2.zero;
+
                 Vector3 rootPos = Vector3.zero;
                 updateRectPosition(rootPsdGameObject, rootPos, true);
 
@@ -583,14 +581,14 @@
                 //currentPath = Path.Combine(currentPath, layer.Name.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries)[0]);
                 createDic(currentPath);
 
-                if (UseUnityUI)
-                {
-                    ////CreateUIAnimation(layer);
-                }
-                else
-                {
-                    CreateAnimation(layer);
-                }
+                //if (UseUnityUI)
+                //{
+                //    ////CreateUIAnimation(layer);
+                //}
+                //else
+                //{
+                //    CreateAnimation(layer);
+                //}
 
                 currentPath = oldPath;
                 currentGroupGameObject = oldGroupObject;
@@ -674,14 +672,14 @@
                 if (LayoutInScene || CreatePrefab)
                 {
                     // create a sprite from the layer to lay it out in the scene
-                    if (!UseUnityUI)
-                    {
-                        CreateSpriteGameObject(layer);
-                    }
-                    else
-                    {
-                        CreateUIImage(layer);
-                    }
+                    //if (!UseUnityUI)
+                    //{
+                    //    CreateSpriteGameObject(layer);
+                    //}
+                    //else
+                    //{
+                    CreateUIImage(layer);
+                    //}
                 }
                 else
                 {
@@ -699,15 +697,15 @@
                 // it is a text layer
                 if (LayoutInScene || CreatePrefab)
                 {
-                    // create text mesh
-                    if (!UseUnityUI)
-                    {
-                        CreateTextGameObject(layer);
-                    }
-                    else
-                    {
-                        CreateUIText(layer);
-                    }
+                    //// create text mesh
+                    //if (!UseUnityUI)
+                    //{
+                    //    CreateTextGameObject(layer);
+                    //}
+                    //else
+                    //{
+                    CreateUIText(layer);
+                    //}
                 }
             }
         }
@@ -822,72 +820,72 @@
         /// <summary>
         /// Creates a <see cref="GameObject"/> with a <see cref="TextMesh"/> from the given <see cref="Layer"/>.
         /// </summary>
-        /// <param name="layer">The <see cref="Layer"/> to create a <see cref="TextMesh"/> from.</param>
-        private static void CreateTextGameObject(Layer layer)
-        {
-            Color color = layer.FillColor;
+        ///// <param name="layer">The <see cref="Layer"/> to create a <see cref="TextMesh"/> from.</param>
+        //private static void CreateTextGameObject(Layer layer)
+        //{
+        //    Color color = layer.FillColor;
 
-            float x = layer.Rect.x / PixelsToUnits;
-            float y = layer.Rect.y / PixelsToUnits;
-            y = (CanvasSize.y / PixelsToUnits) - y;
-            float width = layer.Rect.width / PixelsToUnits;
-            float height = layer.Rect.height / PixelsToUnits;
+        //    float x = layer.Rect.x / PixelsToUnits;
+        //    float y = layer.Rect.y / PixelsToUnits;
+        //    y = (CanvasSize.y / PixelsToUnits) - y;
+        //    float width = layer.Rect.width / PixelsToUnits;
+        //    float height = layer.Rect.height / PixelsToUnits;
 
-            GameObject gameObject = CreateObj(layer.Name);
-            updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
-            updateItemParent(gameObject, currentGroupGameObject);
+        //    GameObject gameObject = CreateObj(layer.Name);
+        //    updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
+        //    updateItemParent(gameObject, currentGroupGameObject);
 
-            currentDepth -= depthStep;
+        //    currentDepth -= depthStep;
 
-            Font font = getFontInfo();
+        //    Font font = getFontInfo();
 
-            MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
-            meshRenderer.material = font.material;
+        //    MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
+        //    meshRenderer.material = font.material;
 
-            TextMesh textMesh = gameObject.AddComponent<TextMesh>();
-            textMesh.text = layer.Text;
-            textMesh.font = font;
-            textMesh.fontSize = 0;
-            textMesh.characterSize = layer.FontSize / PixelsToUnits;
-            textMesh.color = color;
-            textMesh.anchor = TextAnchor.MiddleCenter;
+        //    TextMesh textMesh = gameObject.AddComponent<TextMesh>();
+        //    textMesh.text = layer.Text;
+        //    textMesh.font = font;
+        //    textMesh.fontSize = 0;
+        //    textMesh.characterSize = layer.FontSize / PixelsToUnits;
+        //    textMesh.color = color;
+        //    textMesh.anchor = TextAnchor.MiddleCenter;
 
-            switch (layer.Justification)
-            {
-                case TextJustification.Left:
-                    textMesh.alignment = TextAlignment.Left;
-                    break;
-                case TextJustification.Right:
-                    textMesh.alignment = TextAlignment.Right;
-                    break;
-                case TextJustification.Center:
-                    textMesh.alignment = TextAlignment.Center;
-                    break;
-            }
-        }
+        //    switch (layer.Justification)
+        //    {
+        //        case TextJustification.Left:
+        //            textMesh.alignment = TextAlignment.Left;
+        //            break;
+        //        case TextJustification.Right:
+        //            textMesh.alignment = TextAlignment.Right;
+        //            break;
+        //        case TextJustification.Center:
+        //            textMesh.alignment = TextAlignment.Center;
+        //            break;
+        //    }
+        //}
 
         /// <summary>
         /// Creates a <see cref="GameObject"/> with a sprite from the given <see cref="Layer"/>
         /// </summary>
         /// <param name="layer">The <see cref="Layer"/> to create the sprite from.</param>
-        /// <returns>The <see cref="SpriteRenderer"/> component attached to the new sprite <see cref="GameObject"/>.</returns>
-        private static SpriteRenderer CreateSpriteGameObject(Layer layer)
-        {
-            float x = layer.Rect.x / PixelsToUnits;
-            float y = layer.Rect.y / PixelsToUnits;
-            y = (CanvasSize.y / PixelsToUnits) - y;
-            float width = layer.Rect.width / PixelsToUnits;
-            float height = layer.Rect.height / PixelsToUnits;
-            GameObject gameObject = CreateObj(layer.Name);
-            updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
-            updateItemParent(gameObject, currentGroupGameObject);
+        ///// <returns>The <see cref="SpriteRenderer"/> component attached to the new sprite <see cref="GameObject"/>.</returns>
+        //private static SpriteRenderer CreateSpriteGameObject(Layer layer)
+        //{
+        //    float x = layer.Rect.x / PixelsToUnits;
+        //    float y = layer.Rect.y / PixelsToUnits;
+        //    y = (CanvasSize.y / PixelsToUnits) - y;
+        //    float width = layer.Rect.width / PixelsToUnits;
+        //    float height = layer.Rect.height / PixelsToUnits;
+        //    GameObject gameObject = CreateObj(layer.Name);
+        //    updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
+        //    updateItemParent(gameObject, currentGroupGameObject);
 
-            currentDepth -= depthStep;
+        //    currentDepth -= depthStep;
 
-            SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
-            spriteRenderer.sprite = CreateSprite(layer);
-            return spriteRenderer;
-        }
+        //    SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
+        //    spriteRenderer.sprite = CreateSprite(layer);
+        //    return spriteRenderer;
+        //}
 
         private static void updateRectPosition(GameObject rect, Vector3 position, bool isRoot = false)
         {
@@ -909,65 +907,65 @@
         /// Creates a Unity sprite animation from the given <see cref="Layer"/> that is a group layer.  It grabs all of the children art
         /// layers and uses them as the frames of the animation.
         /// </summary>
-        /// <param name="layer">The group <see cref="Layer"/> to use to create the sprite animation.</param>
-        private static void CreateAnimation(Layer layer)
-        {
-            float fps = 30;
+//        /// <param name="layer">The group <see cref="Layer"/> to use to create the sprite animation.</param>
+//        private static void CreateAnimation(Layer layer)
+//        {
+//            float fps = 30;
 
-            string[] args = layer.Name.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+//            string[] args = layer.Name.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
 
-            foreach (string arg in args)
-            {
-                if (arg.ContainsIgnoreCase("FPS="))
-                {
-                    updateLayerName(layer, layer.Name.Replace("|" + arg, string.Empty));
+//            foreach (string arg in args)
+//            {
+//                if (arg.ContainsIgnoreCase("FPS="))
+//                {
+//                    updateLayerName(layer, layer.Name.Replace("|" + arg, string.Empty));
 
-                    string[] fpsArgs = arg.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
-                    if (!float.TryParse(fpsArgs[1], out fps))
-                    {
-                        Debug.LogError(string.Format("Unable to parse FPS: \"{0}\"", arg));
-                    }
-                }
-            }
+//                    string[] fpsArgs = arg.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
+//                    if (!float.TryParse(fpsArgs[1], out fps))
+//                    {
+//                        Debug.LogError(string.Format("Unable to parse FPS: \"{0}\"", arg));
+//                    }
+//                }
+//            }
 
-            List<Sprite> frames = new List<Sprite>();
+//            List<Sprite> frames = new List<Sprite>();
 
-            Layer firstChild = layer.Children.First();
-            SpriteRenderer spriteRenderer = CreateSpriteGameObject(firstChild);
-            spriteRenderer.name = layer.Name;
+//            Layer firstChild = layer.Children.First();
+//            SpriteRenderer spriteRenderer = CreateSpriteGameObject(firstChild);
+//            spriteRenderer.name = layer.Name;
 
-            foreach (Layer child in layer.Children)
-            {
-                frames.Add(CreateSprite(child, layer.Name));
-            }
+//            foreach (Layer child in layer.Children)
+//            {
+//                frames.Add(CreateSprite(child, layer.Name));
+//            }
 
-            spriteRenderer.sprite = frames[0];
+//            spriteRenderer.sprite = frames[0];
 
-#if UNITY_5
-            // Create Animator Controller with an Animation Clip
-            UnityEditor.Animations.AnimatorController controller = new UnityEditor.Animations.AnimatorController();
-            controller.AddLayer("Base Layer");
+//#if UNITY_5
+//            // Create Animator Controller with an Animation Clip
+//            UnityEditor.Animations.AnimatorController controller = new UnityEditor.Animations.AnimatorController();
+//            controller.AddLayer("Base Layer");
 
-            UnityEditor.Animations.AnimatorControllerLayer controllerLayer = controller.layers[0];
-            UnityEditor.Animations.AnimatorState state = controllerLayer.stateMachine.AddState(layer.Name);
-            state.motion = CreateSpriteAnimationClip(layer.Name, frames, fps);
+//            UnityEditor.Animations.AnimatorControllerLayer controllerLayer = controller.layers[0];
+//            UnityEditor.Animations.AnimatorState state = controllerLayer.stateMachine.AddState(layer.Name);
+//            state.motion = CreateSpriteAnimationClip(layer.Name, frames, fps);
 
-            AssetDatabase.CreateAsset(controller, GetRelativePath(currentPath) + "/" + layer.Name + ".controller");
-#else // Unity 4
-            // Create Animator Controller with an Animation Clip
-            AnimatorController controller = new AnimatorController();
-            AnimatorControllerLayer controllerLayer = controller.AddLayer("Base Layer");
+//            AssetDatabase.CreateAsset(controller, GetRelativePath(currentPath) + "/" + layer.Name + ".controller");
+//#else // Unity 4
+//            // Create Animator Controller with an Animation Clip
+//            AnimatorController controller = new AnimatorController();
+//            AnimatorControllerLayer controllerLayer = controller.AddLayer("Base Layer");
 
-            State state = controllerLayer.stateMachine.AddState(layer.Name);
-            state.SetAnimationClip(CreateSpriteAnimationClip(layer.Name, frames, fps));
+//            State state = controllerLayer.stateMachine.AddState(layer.Name);
+//            state.SetAnimationClip(CreateSpriteAnimationClip(layer.Name, frames, fps));
 
-            AssetDatabase.CreateAsset(controller, GetRelativePath(currentPath) + "/" + layer.Name + ".controller");
-#endif
+//            AssetDatabase.CreateAsset(controller, GetRelativePath(currentPath) + "/" + layer.Name + ".controller");
+//#endif
 
-            // Add an Animator and assign it the controller
-            Animator animator = spriteRenderer.gameObject.AddComponent<Animator>();
-            animator.runtimeAnimatorController = controller;
-        }
+//            // Add an Animator and assign it the controller
+//            Animator animator = spriteRenderer.gameObject.AddComponent<Animator>();
+//            animator.runtimeAnimatorController = controller;
+//        }
 
         /// <summary>
         /// Creates an <see cref="AnimationClip"/> of a sprite animation using the given <see cref="Sprite"/> frames and frames per second.
@@ -1193,8 +1191,7 @@
 
             textUI.color = color;
             textUI.alignment = TextAnchor.MiddleCenter;
-
-
+            
             switch (layer.Justification)
             {
                 case TextJustification.Left:
