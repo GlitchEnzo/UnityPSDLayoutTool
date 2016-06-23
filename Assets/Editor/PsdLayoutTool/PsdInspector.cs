@@ -32,9 +32,17 @@
         /// </summary>
         public void OnEnable()
         {
-
             // use reflection to get the default Inspector
             Type type = Type.GetType("UnityEditor.TextureImporterInspector, UnityEditor");
+
+            if(target==null )
+            {
+                Debug.Log(Time.time + "target is null");
+            }
+            if (type == null)
+            {
+                Debug.Log(Time.time + "type is null");
+            }
 
             nativeEditor = CreateEditor(target, type);
 
@@ -50,20 +58,19 @@
             }
 
 
-            TextureImporter import = (TextureImporter)target;
-            if (import.textureType != TextureImporterType.Sprite)
-            {
-                import.textureType = TextureImporterType.Sprite;
-                import.mipmapEnabled = false;
-                import.textureFormat = TextureImporterFormat.RGBA32;
-                import.filterMode = FilterMode.Bilinear;
-                import.SaveAndReimport();
-                import.textureFormat = TextureImporterFormat.AutomaticCompressed;
-                Debug.Log(Time.time + " focuse on cur image forse set Image as Sprite type！");
-            }
+            //TextureImporter import = (TextureImporter)target;
+            //if (import.textureType != TextureImporterType.Sprite)
+            //{
+            //    import.textureType = TextureImporterType.Sprite;
+            //    import.mipmapEnabled = false;
+            //    //import.textureFormat = TextureImporterFormat.RGBA32;
+            //    import.filterMode = FilterMode.Bilinear;
+            //    import.SaveAndReimport();
+            //    import.textureFormat = TextureImporterFormat.AutomaticCompressed;
+            //    Debug.Log(Time.time + " focuse on cur image forse set Image as Sprite type！");
+            //}
         }
 
-    
         /// <summary>
         /// Draws the Inspector GUI for the TextureImporter.
         /// Normal Texture files should appear as they normally do, however PSD files will have additional items.
@@ -75,10 +82,10 @@
                 // check if it is a PSD file selected
                 string assetPath = ((TextureImporter)target).assetPath;
 
-                if (assetPath.EndsWith(".psd"))
+                if (assetPath.EndsWith(PsdImporter.PSD_TAIL))
                 {
                     GUILayout.Label("<b>PSD Layout Tool</b>", guiStyle, GUILayout.Height(23));
-                     
+
                     //All ui depth is the same 1
                     //GUIContent maximumDepthLabel = new GUIContent("Maximum Depth", "The Z value of the far back plane. The PSD will be laid out from here to 0.");
                     //PsdImporter.MaximumDepth = EditorGUILayout.FloatField(maximumDepthLabel, PsdImporter.MaximumDepth);
@@ -115,7 +122,7 @@
 
                     if (GUILayout.Button("Layout in Current Scene(use image real size)"))
                     {
-                        PsdImporter.LayoutInCurrentScene(assetPath,true );
+                        PsdImporter.LayoutInCurrentScene(assetPath, true);
                     }
 
                     if (GUILayout.Button("Generate Prefab"))

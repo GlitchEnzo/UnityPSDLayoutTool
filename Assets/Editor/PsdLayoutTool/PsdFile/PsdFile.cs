@@ -141,7 +141,7 @@
         /// <param name="reader">The reader containing the PSD file data</param>
         private void LoadHeader(BinaryReverseReader reader)
         {
-            string strHead = new string(reader.ReadChars(4));
+            string strHead = reader.readStringNew(4);
             Debug.Log(Time.time+ "read strHead="+ strHead);
             if (strHead != "8BPS")
             {
@@ -150,6 +150,7 @@
             }
 
             Version = reader.ReadInt16();
+            Debug.Log(Time.time + "read version=" + Version);
             if (Version != 1)
             {
                 UnityEngine.Debug.LogError("The PSD file has an invalid version");
@@ -162,6 +163,7 @@
             width = reader.ReadInt32();
             depth = reader.ReadInt16();
             ColorMode = (ColorModes)reader.ReadInt16();
+            Debug.Log(Time.time + "read width=" + width+ ",height="+ height+ ",ColorMode="+ ColorMode.ToString());
         }
 
         /// <summary>
@@ -171,6 +173,7 @@
         private void LoadColorModeData(BinaryReverseReader reader)
         {
             uint num = reader.ReadUInt32();
+        //    Debug.Log(Time.time + "LoadColorModeData number=" + num);
             if (num <= 0U)
             {
                 return;
@@ -187,6 +190,7 @@
         {
             ImageResources.Clear();
             uint num = reader.ReadUInt32();
+            Debug.Log(Time.time + "LoadImageResources num="+ num);
             if (num <= 0U)
             {
                 return;
@@ -196,6 +200,7 @@
             while (reader.BaseStream.Position - position < num)
             {
                 ImageResource imgRes = new ImageResource(reader);
+               //Debug.Log(Time.time + ",read imgRes.ID= " + imgRes.ID);
                 switch ((ResourceIDs)imgRes.ID)
                 {
                     case ResourceIDs.XMLInfo:
@@ -205,7 +210,6 @@
                         {
                             Category = source.First().Value;
                         }
-
                         break;
 
                     case ResourceIDs.ResolutionInfo:
@@ -213,6 +217,13 @@
                         break;
 
                     case ResourceIDs.AlphaChannelNames:
+                        imgRes = new AlphaChannels(imgRes);
+                        break;
+
+                    case ResourceIDs.PsCCOrignPathInfo:
+                        imgRes = new AlphaChannels(imgRes);
+                        break;
+                    case ResourceIDs.PsCCPathSelectionState:
                         imgRes = new AlphaChannels(imgRes);
                         break;
                 }
@@ -229,7 +240,9 @@
         /// <param name="reader">The reader to use to read the layer and mask info.</param>
         private void LoadLayerAndMaskInfo(BinaryReverseReader reader)
         {
-            uint num = reader.ReadUInt32();
+            //long numnew = reader.ReadInt64();
+            long num =   reader.ReadUInt32();
+            Debug.Log(Time.time + ",LoadLayerAndMaskInfo num=" + num);
             if (num <= 0U)
             {
                 return;
@@ -247,21 +260,30 @@
         /// <param name="reader">The reader to use to read the layers.</param>
         private void LoadLayers(BinaryReverseReader reader)
         {
-            uint num1 = reader.ReadUInt32();
-            if (num1 <= 0U)
-            {
-                return;
-            }
+        // long numnew = reader.ReadInt64();
+            //Debug.Log(Time.time + "LoadLayers numnew=" + numnew);
+
+            int num1 =  reader.ReadInt32();//.ReadUInt32(); ;// reader.ReadUInt32();
+              Debug.Log(Time.time + "LoadLayers num1=" + num1 + ",return ?" + (num1 <= 0U));
+
+            //if (num1 <= 0U)
+            //{
+            //    return;
+            //}
 
             long position = reader.BaseStream.Position;
-            short num2 = reader.ReadInt16();
+            //short num2 = reader.ReadInt16();
+            ushort num2 = reader.ReadUInt16();
             if (num2 < 0)
             {
                 AbsoluteAlpha = true;
-                num2 = Math.Abs(num2);
+               // num2 = Math.Abs(num2);
             }
 
             Layers.Clear();
+            //yanruTODO测试
+            //num2 = 2;
+            Debug.Log(Time.time + "LoadLayers num2=" + num2 + ",return ?" + (num2 == 0));
             if (num2 == 0)
             {
                 return;

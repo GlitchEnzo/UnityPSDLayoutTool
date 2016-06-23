@@ -15,22 +15,21 @@
         /// </summary>
         /// <param name="stream">The stream to read through.</param>
         public BinaryReverseReader(Stream stream)
-            : base(stream, Encoding.UTF8)//.UTF7)
+            : base(stream, Encoding.Default)//.UTF7)
         {
         }
 
-        //public override byte ReadByte()
-        //{
-        //    byte num = base.ReadByte();
-        //    num = ReverseBytes(num);
-        //    return num;
-        //}
+        public string readStringNew(int charCount)
+        {
+            return getEncodeStr(ReadBytes(charCount));
+        }
 
-        //public override byte[] ReadBytes(int count)
-        //{
-        // return    base.ReadBytes(count);
-        //}
-
+        private string getEncodeStr(byte [] bytes)
+        {
+            //Debug.Log(Time.time + "Encoding.Default=" + Encoding.Default  + ",Encoding.UTF8=" + Encoding.UTF8);
+            return new string(Encoding.Default.GetChars(bytes));
+        }
+        
         /// <summary>
         /// Reads a 16 bit int (2 bytes) from the stream.
         /// </summary>
@@ -109,7 +108,7 @@
             {
                 ReadByte();
             }
-            return new string(Encoding.UTF8.GetChars(bytes));
+            return   getEncodeStr(bytes);
         }
 
         /// <summary>
@@ -155,33 +154,22 @@
         {
             string str = string.Empty;
             List<byte> bytelist = new List<byte>();
-            string strtest = "";
-            string strtest123 = "";
-
-            BinaryReader tempStream = new BinaryReader(BaseStream);
 
             try
             {
-                //strtest123 = BaseStream
-                //Debug.Log(Time.time + "BaseStream.Position=" + BaseStream.Position);
                 while (BaseStream.Position < BaseStream.Length)
                 {
-                    char char1 = ReadChar();
-                    byte char2 = ReadByte();
-
-                    strtest += char2 + ",";
-                    if (char1 == 0)
+                    byte char1 = ReadByte();
+                    if (char1 == 0) //byte=0是ASCII码表中的空字符
                     {
-                        bytelist.Add(char2);
+                        bytelist.Add(ReadByte());
                     }
                     else
                     {
-                        //Debug.Log(Time.time + ",此时 char2=" + char2);
-                        //Debug.Log(Time.time + ",此时 char1=" + char1);
                         break;
                     }
-
                 }
+
             }
             catch (ArgumentException)
             {
@@ -192,25 +180,10 @@
             for (int index = 0; index < bytelist.Count; index++)
                 res[index] = bytelist[index];
 
-            str = System.Text.Encoding.Default.GetString(res);
-
-            this.
-            BaseStream.Position = 4;
-
-            //string strtest345 = new string(Encoding.UTF8.GetChars(this.ReadBytes(Convert.ToInt32(BaseStream.Length - BaseStream.Position -1))));
-            //binReader.ReadChars(
-            //         (int)(memStream.Length - memStream.Position)));
-            //tempStream.ReadBytes(Convert.ToInt32(tempStream.BaseStream.Length - tempStream.BaseStream.Position ));
-            ////yanruTODO testlog
-
-            if (str.Contains("zhang"))
-                Debug.Log(Time.time + "str=" + str + ",test=\n" + strtest + ",strtest123=" + strtest123 +
-                    ",length=" + BaseStream.Length+ ", BaseStream.Position=" + BaseStream.Position);
+            str = getEncodeStr(res);
 
             return str;
         }
-
-
 
         /// <summary>
         /// Searches through the stream for the given string.  If found, the position in the stream
@@ -220,7 +193,7 @@
         /// <param name="search">The string to search for.</param>
         public void Seek(string search)
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(search);
+            byte[] bytes =  Encoding.UTF8.GetBytes(search);
             Seek(bytes);
         }
 

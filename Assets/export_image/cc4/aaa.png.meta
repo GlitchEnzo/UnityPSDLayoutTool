@@ -1,6 +1,6 @@
 fileFormatVersion: 2
-guid: ebf9e4e978fe3b14f9b3166d3f15eb22
-timeCreated: 1466592483
+guid: 3d069b0d9427552499ad3abafa3bd03c
+timeCreated: 1466677277
 licenseType: Free
 TextureImporter:
   fileIDToRecycleName: {}
@@ -51,7 +51,7 @@ TextureImporter:
   spriteSheet:
     sprites: []
     outline: []
-  spritePackingTag: HeroCommon
+  spritePackingTag: cc4
   userData: 
   assetBundleName: 
   assetBundleVariant: 

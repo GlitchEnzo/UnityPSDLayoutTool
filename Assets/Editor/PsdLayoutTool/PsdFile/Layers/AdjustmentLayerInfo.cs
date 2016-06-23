@@ -14,12 +14,13 @@
         /// <param name="layer">The layer that this adjustment info belongs to</param>
         public AdjustmentLayerInfo(BinaryReverseReader reader, Layer layer)
         {
-            if (new string(reader.ReadChars(4)) != "8BIM")
+            string head = reader.readStringNew(4);
+            if (head != "8BIM")
             {
                 throw new IOException("Could not read an image resource");
             }
 
-            Key = new string(reader.ReadChars(4));
+            Key = reader.readStringNew(4);
             if (Key == "lfx2" || Key == "lrFX")
             {
                 layer.HasEffects = true;
@@ -28,8 +29,6 @@
             //int readlength = byte.MaxValue;
              uint length = reader.ReadUInt32();
             Data = reader.ReadBytes(  (int)length);
-
-            //string Stringdata = "";// new string(reader.ReadChars(4));
 
             //Debug.Log(Time.time + ",new AdjustmentLayerInfo key=" + Key +",strdata="+Stringdata);
         }

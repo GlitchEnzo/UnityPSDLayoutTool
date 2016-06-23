@@ -18,21 +18,28 @@
     /// </summary>
     public static class PsdImporter
     {
-
         ///attention：
         ///string const as psd layer name keyword!
+        ///多个按钮都用到aaa资源时，第二个之后的按钮需要命名为aaa(1)，即btn_aaa(1),btn_aaa(1)_highlight
+        ///
         public const string BTN_HEAD = "btn_";              //button normal image keyword
         public const string BTN_TAIL_HIGH = "_highlight";   //button highilght image keyward
         public const string BTN_TAIL_DIS = "_disable";      //buttno disable image keyword
-
-        //public const string TEXT_HEAD = "text_";            //text keyword
-
+         
         public const string PUBLIC_IMG_HEAD = "public_";    //public images that more than one UI may use
 
         //sliced image type, image name like aaa_330_400,image name end with width and height,
         //Image will layout as sizeDelta=(330,440),rather than current image reak size
 
         private const string PUBLIC_IMG_PATH =  @"\public_images";//public images relative path
+
+
+        public const string PSD_TAIL = ".psd";
+
+        public const string IMG_TAIL = ".png";
+
+        //对于空图片自动补一个名字
+        public const string NO_NAME_HEAD = "no_name_";
 
         /// <summary>
         /// The current file path to use to save layers as .png files
@@ -66,6 +73,8 @@
         /// The amount that the depth decrements for each layer.  This is automatically calculated from the number of layers in the PSD file and the MaximumDepth.
         /// </summary>
         private static float depthStep;
+
+        private static List<string> btnNameList;
 
         /// <summary>
         /// Initializes static members of the <see cref="PsdImporter"/> class.
@@ -134,6 +143,8 @@
 
 
         private static bool _useRealImageSize = false;
+
+        private static int _nullImageIndex = 0;
         /// <summary>
         /// force use font
         /// </summary>
@@ -163,6 +174,8 @@
         }
 
         private static Dictionary<GameObject, Vector3> _positionDic;
+
+        private static Dictionary<string, Sprite> _imageDic;
 
         /// <summary>
         /// Gets or sets the current <see cref="PsdFile"/> that is being imported.
@@ -210,13 +223,18 @@
         /// <param name="asset">The path of to the .psd file relative to the project.</param>
         private static void Import(string asset)
         {
+            Debug.Log(Time.time + ",start deal asset=" + asset);
+
+            _imageDic = new Dictionary<string, Sprite>();
+            btnNameList = new List<string>();
+            _nullImageIndex = 0;
             _positionDic = new Dictionary<GameObject, Vector3>();
 
             currentDepth = MaximumDepth;
             string fullPath = Path.Combine(GetFullProjectPath(), asset.Replace('\\', '/'));
 
             PsdFile psd = new PsdFile(fullPath);
-            CanvasSize = ScreenResolution;// new Vector2(psd.Width, psd.Height);
+            CanvasSize = ScreenResolution;
             Debug.Log(Time.time + "update canvasSize as UI size=" + CanvasSize);
             // Set the depth step based on the layer count.  If there are no layers, default to 0.1f.
             depthStep = psd.Layers.Count != 0 ? MaximumDepth / psd.Layers.Count : 0.1f;
@@ -253,6 +271,11 @@
                 currentGroupGameObject = rootPsdGameObject;
             }
 
+            for (int index = 0; index < psd.Layers.Count; index++)
+            {
+                Debug.Log(Time.time + ",read psd.Layers=" + psd.Layers[index].Name);
+            }
+
             List<Layer> tree = BuildLayerTree(psd.Layers);
             ExportTree(tree);
 
@@ -262,15 +285,6 @@
                 PrefabUtility.ReplacePrefab(rootPsdGameObject, prefab);
             }
 
-            //all ui items created, update components
-            if (rootPsdGameObject== null)
-            {
-                return;
-            }
-
-            Debug.Log(Time.time + ",dealUI=" + rootPsdGameObject.name + ",finish");
-            
-
             int childCount = rootPsdGameObject.transform.childCount;
             for (int index = 0; index < childCount; index++)
             {
@@ -278,17 +292,47 @@
                 tran.position += new Vector3(ScreenResolution.x / 2f, ScreenResolution.y / 2f, 0);
             }
 
-            
+            //step1:刷新按钮SpriteState，删除按钮状态Image
+            updateBtnsSpriteState();
+
+            //step2:最后删除多余的图片aaa(1),aaa(1)_highlight这种。并调整引用
+            DeleteExtraImages();
+
+
+            AssetDatabase.Refresh();
+            Debug.Log(Time.time + ",dealUI=" + rootPsdGameObject.name + ",finish,time="+Time.time);
+        }
+
+        //删除未引用图片
+        private static void DeleteExtraImages()
+        {
+            List<string> imgaePathList = new List<string>(_imageDic.Keys);
+            for (int index = 0; index < imgaePathList.Count; index++)
+            {
+                string pathtemp = imgaePathList[index];
+                if (spriteNameExtra(pathtemp) != "")
+                {
+                    Debug.Log(Time.time + "需要删除多余资源 url=" + pathtemp);
+                    File.Delete(pathtemp);
+                }
+            }
+        }
+
+        private static void updateBtnsSpriteState()
+        {
             Dictionary<Transform, bool> _dealDic = new Dictionary<Transform, bool>(); //flag if item will be deleted
 
             List<Transform> btnList = new List<Transform>();
             List<Transform> deleteList = new List<Transform>();
 
             Transform[] allChild = rootPsdGameObject.GetComponentsInChildren<Transform>();
+
+            List<Sprite> canUseSpriteList = new List<Sprite>(); //最终可用的Sprite列表
+
             for (int index = 0; index < allChild.Length; index++)
             {
                 Transform tran = allChild[index];
-                if (tran.name.IndexOf(BTN_HEAD) == 0)
+                if (tran.name.IndexOf(BTN_HEAD) == 0) //is a button
                 {
                     Button button = tran.gameObject.AddComponent<Button>();
                     tran.GetComponent<Image>().raycastTarget = true;
@@ -331,7 +375,7 @@
                             }
                         }
                     }
-                
+
                     if (allChild[index].name.IndexOf(btnName) == 0)
                     {
                         if (allChild[index].name.Contains(BTN_TAIL_HIGH))//button highlight image
@@ -340,28 +384,99 @@
                             sprite.pressedSprite = allChild[index].GetComponent<Image>().sprite;
                             btnList[btnIndex].GetComponent<Button>().spriteState = sprite;
                             deleteList.Add(tran);
+                            checkAddSprite(ref canUseSpriteList, sprite.pressedSprite);
                         }
-                        if (allChild[index].name.Contains(BTN_TAIL_DIS))//button disable image 
+                        else if (allChild[index].name.Contains(BTN_TAIL_DIS))//button disable image 
                         {
                             SpriteState sprite = btnList[btnIndex].GetComponent<Button>().spriteState;
                             sprite.disabledSprite = allChild[index].GetComponent<Image>().sprite;
                             btnList[btnIndex].GetComponent<Button>().spriteState = sprite;
                             deleteList.Add(tran);
+                            checkAddSprite(ref canUseSpriteList, sprite.disabledSprite);
+                        }
+                        else if (allChild[index].GetComponent<Image>() != null)
+                        {
+                            checkAddSprite(ref canUseSpriteList, allChild[index].GetComponent<Image>().sprite);
                         }
                     }
                 }
             }
 
-            //delete no use items
 
+            //delete no use items
             for (int index = 0; index < deleteList.Count; index++)
             {
                 destroyItem(deleteList[index]);
             }
 
-            AssetDatabase.Refresh();
+            for (int index = 0; index < allChild.Length; index++)
+            {
+                if (allChild[index] == null)
+                    continue;
+                Button button = allChild[index].GetComponent<Button>();
+                if (button == null)
+                    continue;
+
+                SpriteState sprite = button.spriteState;
+                if (sprite.pressedSprite != null)
+                {
+                    sprite.pressedSprite = rescriteBtnSprite(canUseSpriteList, sprite.pressedSprite);
+                }
+                if (sprite.disabledSprite != null)
+                {
+                    sprite.disabledSprite = rescriteBtnSprite(canUseSpriteList, sprite.disabledSprite);
+                }
+                Sprite normalSprite = button.GetComponent<Image>().sprite;
+                normalSprite = rescriteBtnSprite(canUseSpriteList, normalSprite);
+
+                button.spriteState = sprite;
+            }
+
         }
 
+        private static Sprite rescriteBtnSprite(List<Sprite> canUseSpriteList,   Sprite sprite)
+        {
+            string extra = spriteNameExtra(sprite.name);
+            if (extra != "")
+            {
+                string temp = sprite.name.Replace(extra, "");
+                for (int subIndex = 0; subIndex < canUseSpriteList.Count; subIndex++)
+                {
+                    if (canUseSpriteList[subIndex].name == temp)
+                    {
+                        //Debug.Log(Time.time + ",刷新 按钮" + button.name + ", pres=" + sprite.name);
+                        sprite = canUseSpriteList[subIndex];
+                        break;
+                    }
+                }
+            }
+
+            return sprite;
+        }
+
+        private static void checkAddSprite(ref List<Sprite> list, Sprite sprite)
+        {
+            if (spriteNameExtra(sprite.name) == "")
+            {
+                list.Add(sprite);
+            }
+        }
+
+        private static string  spriteNameExtra(string itemName)
+        {
+            Regex reg = new Regex(@"[(]+\d+[)]");
+            string tempLayerName = itemName;
+            tempLayerName = tempLayerName.TrimEnd(BTN_TAIL_DIS.ToCharArray());
+            tempLayerName = tempLayerName.TrimEnd(BTN_TAIL_HIGH.ToCharArray());
+            Match match = reg.Match(tempLayerName);
+            if (match.ToString() != "")
+            {
+                string res = tempLayerName.Replace(match.ToString(), "");
+                //Debug.Log(Time.time + ", 找到一个匹配的 create png layername=" + itemName + ",match=" + match + ",res=" + res);
+                return match.ToString();
+            }
+            return "";
+        }
 
         //TODO testButton
         public static void TestClick()
@@ -414,6 +529,7 @@
                     }
                     else if (currentGroupLayer != null)
                     {
+                    //    Debug.Log(Time.time + ",add layer currentGroupLayer.name=" + currentGroupLayer.Name);
                         tree.Add(currentGroupLayer);
                         currentGroupLayer = null;
                     }
@@ -437,6 +553,7 @@
                     }
                     else
                     {
+                  //      Debug.Log(Time.time + ",add layer layer.name=" + layer.Name);
                         tree.Add(layer);
                     }
                 }
@@ -530,6 +647,7 @@
             // we must go through the tree in reverse order since Unity draws from back to front, but PSDs are stored front to back
             for (int i = tree.Count - 1; i >= 0; i--)
             {
+                //Debug.Log(Time.time + ",ExportTree, layername=" + tree[i].Name);
                 ExportLayer(tree[i]);
             }
         }
@@ -578,18 +696,7 @@
                 string oldPath = currentPath;
                 GameObject oldGroupObject = currentGroupGameObject;
 
-                //currentPath = Path.Combine(currentPath, layer.Name.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries)[0]);
                 createDic(currentPath);
-
-                //if (UseUnityUI)
-                //{
-                //    ////CreateUIAnimation(layer);
-                //}
-                //else
-                //{
-                //    CreateAnimation(layer);
-                //}
-
                 currentPath = oldPath;
                 currentGroupGameObject = oldGroupObject;
             }
@@ -671,41 +778,19 @@
             {
                 if (LayoutInScene || CreatePrefab)
                 {
-                    // create a sprite from the layer to lay it out in the scene
-                    //if (!UseUnityUI)
-                    //{
-                    //    CreateSpriteGameObject(layer);
-                    //}
-                    //else
-                    //{
                     CreateUIImage(layer);
-                    //}
                 }
                 else
                 {
-                    //if(createdNameList.Contains(layer.Name))
-                    //{
-                    //    layer.Name = layer.Name + "_new_" + createdNameList.Count;
-                    //}
-                    // it is not being laid out in the scene, so simply save out the .png file
                     CreatePNG(layer);
-                    //createdNameList.Add(layer.Name);
                 }
             }
             else
             {
                 // it is a text layer
                 if (LayoutInScene || CreatePrefab)
-                {
-                    //// create text mesh
-                    //if (!UseUnityUI)
-                    //{
-                    //    CreateTextGameObject(layer);
-                    //}
-                    //else
-                    //{
+                { 
                     CreateUIText(layer);
-                    //}
                 }
             }
         }
@@ -726,7 +811,7 @@
 
                 string writePath = currentPath;
                 string layerName = trimSpecialHead(layer.Name);
-
+                
                 if (layerName.Contains(PUBLIC_IMG_HEAD))//common images
                 {
                     int length = writePath.Length - 1;
@@ -783,8 +868,9 @@
             {
                 string file = CreatePNG(layer);
                 sprite = ImportSprite(GetRelativePath(file), packingTag);
+                _imageDic.Add(file, sprite);
+                //Debug.Log(Time.time + "CreateSprite layername=" + layer.Name + ",file=" + file + ",sprite null?" + (sprite == null));
             }
-
             return sprite;
         }
 
@@ -796,6 +882,15 @@
         /// <returns>The imported image as a <see cref="Sprite"/> object.</returns>
         private static Sprite ImportSprite(string relativePathToSprite, string packingTag)
         {
+            string temp = relativePathToSprite.Replace(IMG_TAIL, "");
+            //if (temp.EndsWith(@"\"))
+            //{
+            //    temp += NO_NAME_HEAD + _nullImageIndex;
+            //    _nullImageIndex++;
+            //    temp += IMG_TAIL;
+            //    relativePathToSprite = temp;
+            //}
+            //Debug.Log(Time.time + " relativePathToSprite=" + relativePathToSprite+ ",temp="+ temp);
             AssetDatabase.ImportAsset(relativePathToSprite, ImportAssetOptions.ForceUpdate);
 
             // change the importer to make the texture a sprite
@@ -816,77 +911,7 @@
             Sprite sprite = (Sprite)AssetDatabase.LoadAssetAtPath(relativePathToSprite, typeof(Sprite));
             return sprite;
         }
-
-        /// <summary>
-        /// Creates a <see cref="GameObject"/> with a <see cref="TextMesh"/> from the given <see cref="Layer"/>.
-        /// </summary>
-        ///// <param name="layer">The <see cref="Layer"/> to create a <see cref="TextMesh"/> from.</param>
-        //private static void CreateTextGameObject(Layer layer)
-        //{
-        //    Color color = layer.FillColor;
-
-        //    float x = layer.Rect.x / PixelsToUnits;
-        //    float y = layer.Rect.y / PixelsToUnits;
-        //    y = (CanvasSize.y / PixelsToUnits) - y;
-        //    float width = layer.Rect.width / PixelsToUnits;
-        //    float height = layer.Rect.height / PixelsToUnits;
-
-        //    GameObject gameObject = CreateObj(layer.Name);
-        //    updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
-        //    updateItemParent(gameObject, currentGroupGameObject);
-
-        //    currentDepth -= depthStep;
-
-        //    Font font = getFontInfo();
-
-        //    MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
-        //    meshRenderer.material = font.material;
-
-        //    TextMesh textMesh = gameObject.AddComponent<TextMesh>();
-        //    textMesh.text = layer.Text;
-        //    textMesh.font = font;
-        //    textMesh.fontSize = 0;
-        //    textMesh.characterSize = layer.FontSize / PixelsToUnits;
-        //    textMesh.color = color;
-        //    textMesh.anchor = TextAnchor.MiddleCenter;
-
-        //    switch (layer.Justification)
-        //    {
-        //        case TextJustification.Left:
-        //            textMesh.alignment = TextAlignment.Left;
-        //            break;
-        //        case TextJustification.Right:
-        //            textMesh.alignment = TextAlignment.Right;
-        //            break;
-        //        case TextJustification.Center:
-        //            textMesh.alignment = TextAlignment.Center;
-        //            break;
-        //    }
-        //}
-
-        /// <summary>
-        /// Creates a <see cref="GameObject"/> with a sprite from the given <see cref="Layer"/>
-        /// </summary>
-        /// <param name="layer">The <see cref="Layer"/> to create the sprite from.</param>
-        ///// <returns>The <see cref="SpriteRenderer"/> component attached to the new sprite <see cref="GameObject"/>.</returns>
-        //private static SpriteRenderer CreateSpriteGameObject(Layer layer)
-        //{
-        //    float x = layer.Rect.x / PixelsToUnits;
-        //    float y = layer.Rect.y / PixelsToUnits;
-        //    y = (CanvasSize.y / PixelsToUnits) - y;
-        //    float width = layer.Rect.width / PixelsToUnits;
-        //    float height = layer.Rect.height / PixelsToUnits;
-        //    GameObject gameObject = CreateObj(layer.Name);
-        //    updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
-        //    updateItemParent(gameObject, currentGroupGameObject);
-
-        //    currentDepth -= depthStep;
-
-        //    SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
-        //    spriteRenderer.sprite = CreateSprite(layer);
-        //    return spriteRenderer;
-        //}
-
+ 
         private static void updateRectPosition(GameObject rect, Vector3 position, bool isRoot = false)
         {
             rect.GetComponent<RectTransform>().anchoredPosition = position; 
@@ -902,71 +927,7 @@
             obj.AddComponent<RectTransform>();
             return obj;
         }
-
-        /// <summary>
-        /// Creates a Unity sprite animation from the given <see cref="Layer"/> that is a group layer.  It grabs all of the children art
-        /// layers and uses them as the frames of the animation.
-        /// </summary>
-//        /// <param name="layer">The group <see cref="Layer"/> to use to create the sprite animation.</param>
-//        private static void CreateAnimation(Layer layer)
-//        {
-//            float fps = 30;
-
-//            string[] args = layer.Name.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-
-//            foreach (string arg in args)
-//            {
-//                if (arg.ContainsIgnoreCase("FPS="))
-//                {
-//                    updateLayerName(layer, layer.Name.Replace("|" + arg, string.Empty));
-
-//                    string[] fpsArgs = arg.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
-//                    if (!float.TryParse(fpsArgs[1], out fps))
-//                    {
-//                        Debug.LogError(string.Format("Unable to parse FPS: \"{0}\"", arg));
-//                    }
-//                }
-//            }
-
-//            List<Sprite> frames = new List<Sprite>();
-
-//            Layer firstChild = layer.Children.First();
-//            SpriteRenderer spriteRenderer = CreateSpriteGameObject(firstChild);
-//            spriteRenderer.name = layer.Name;
-
-//            foreach (Layer child in layer.Children)
-//            {
-//                frames.Add(CreateSprite(child, layer.Name));
-//            }
-
-//            spriteRenderer.sprite = frames[0];
-
-//#if UNITY_5
-//            // Create Animator Controller with an Animation Clip
-//            UnityEditor.Animations.AnimatorController controller = new UnityEditor.Animations.AnimatorController();
-//            controller.AddLayer("Base Layer");
-
-//            UnityEditor.Animations.AnimatorControllerLayer controllerLayer = controller.layers[0];
-//            UnityEditor.Animations.AnimatorState state = controllerLayer.stateMachine.AddState(layer.Name);
-//            state.motion = CreateSpriteAnimationClip(layer.Name, frames, fps);
-
-//            AssetDatabase.CreateAsset(controller, GetRelativePath(currentPath) + "/" + layer.Name + ".controller");
-//#else // Unity 4
-//            // Create Animator Controller with an Animation Clip
-//            AnimatorController controller = new AnimatorController();
-//            AnimatorControllerLayer controllerLayer = controller.AddLayer("Base Layer");
-
-//            State state = controllerLayer.stateMachine.AddState(layer.Name);
-//            state.SetAnimationClip(CreateSpriteAnimationClip(layer.Name, frames, fps));
-
-//            AssetDatabase.CreateAsset(controller, GetRelativePath(currentPath) + "/" + layer.Name + ".controller");
-//#endif
-
-//            // Add an Animator and assign it the controller
-//            Animator animator = spriteRenderer.gameObject.AddComponent<Animator>();
-//            animator.runtimeAnimatorController = controller;
-//        }
-
+         
         /// <summary>
         /// Creates an <see cref="AnimationClip"/> of a sprite animation using the given <see cref="Sprite"/> frames and frames per second.
         /// </summary>
@@ -1113,6 +1074,9 @@
 
             Image image = gameObject.AddComponent<Image>();
             image.sprite = CreateSprite(layer);
+
+           
+
             image.raycastTarget = false; //can not click Image by yanru 2016-06-16 19:26:55
 
             RectTransform transform = gameObject.GetComponent<RectTransform>();
@@ -1240,107 +1204,17 @@
         {
             // create an empty Image object with a Button behavior attached
             Image image = CreateUIImage(layer);
-
-            /**
-            Button button = image.gameObject.AddComponent<Button>();
-             
-            // look through the children for the sprite states
-            foreach (Layer child in layer.Children)
-            {
-                if (child.Name.ContainsIgnoreCase("|Disabled"))
-                {
-                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Disabled", string.Empty));
-                    button.transition = Selectable.Transition.SpriteSwap;
-
-                    SpriteState spriteState = button.spriteState;
-                    spriteState.disabledSprite = CreateSprite(child);
-                    button.spriteState = spriteState;
-                }
-                else if (child.Name.ContainsIgnoreCase("|Highlighted"))
-                {
-                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Highlighted", string.Empty));
-                    button.transition = Selectable.Transition.SpriteSwap;
-
-                    SpriteState spriteState = button.spriteState;
-                    spriteState.highlightedSprite = CreateSprite(child);
-                    button.spriteState = spriteState;
-                }
-                else if (child.Name.ContainsIgnoreCase("|Pressed"))
-                {
-                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Pressed", string.Empty));
-                    button.transition = Selectable.Transition.SpriteSwap;
-
-                    SpriteState spriteState = button.spriteState;
-                    spriteState.pressedSprite = CreateSprite(child);
-                    button.spriteState = spriteState;
-                }
-                else if (child.Name.ContainsIgnoreCase("|Default") ||
-                         child.Name.ContainsIgnoreCase("|Enabled") ||
-                         child.Name.ContainsIgnoreCase("|Normal") ||
-                         child.Name.ContainsIgnoreCase("|Up"))
-                {
-                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Default", string.Empty));
-                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Enabled", string.Empty));
-                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Normal", string.Empty));
-                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Up", string.Empty));
-
-                    image.sprite = CreateSprite(child);
-
-                    float x = child.Rect.x / PixelsToUnits;
-                    float y = child.Rect.y / PixelsToUnits;
-
-                    // Photoshop increase Y while going down. Unity increases Y while going up.  So, we need to reverse the Y position.
-                    y = (CanvasSize.y / PixelsToUnits) - y;
-
-                    // Photoshop uses the upper left corner as the pivot (0,0).  Unity defaults to use the center as (0,0), so we must offset the positions.
-                    x = x - ((CanvasSize.x / 2) / PixelsToUnits);
-                    y = y - ((CanvasSize.y / 2) / PixelsToUnits);
-
-                    float width = child.Rect.width / PixelsToUnits;
-                    float height = child.Rect.height / PixelsToUnits;
-
-                    Debug.Log(Time.time + ",canvasSize=" + CanvasSize + ",child rect.x=" + child.Rect.width + ",height=" + child.Rect.height);
-                    updateRectPosition(image.gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
-
-                    RectTransform transform = image.GetComponent<RectTransform>();
-                    updateRectSize(ref transform, width, height);
-
-                    button.targetGraphic = image;
-                }
-                else if (child.Name.ContainsIgnoreCase("|Text") && !child.IsTextLayer)
-                {
-                    updateLayerName(child, child.Name.ReplaceIgnoreCase("|Text", string.Empty));
-
-                    GameObject oldGroupObject = currentGroupGameObject;
-                    currentGroupGameObject = button.gameObject;
-
-                    // If the "text" is a normal art layer, create an Image object from the "text"
-                    CreateUIImage(child);
-
-                    currentGroupGameObject = oldGroupObject;
-                }
-
-                if (child.IsTextLayer)
-                {
-
-                    // TODO: Create a child text game object
-                }
-            }
-            **/
         }
          
         private static void updateLayerName(Layer child, string newName)
         {
-            string layerInfo = "";
             child.Name = newName;
-             
         }
 
         private static void  showLog(string str)
         {
             Debug.Log(Time.time + ":"+str);
         }
-
         #endregion
     }
 }

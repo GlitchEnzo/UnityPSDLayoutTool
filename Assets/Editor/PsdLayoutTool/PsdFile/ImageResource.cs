@@ -15,7 +15,7 @@
         public ImageResource(BinaryReverseReader reader)
         {
             // read the OS type
-            string osType = new string(reader.ReadChars(4));
+            string osType = reader.readStringNew(4);
             if (osType != "8BIM" && osType != "MeSa")
             {
                 throw new InvalidOperationException("Could not read an image resource");

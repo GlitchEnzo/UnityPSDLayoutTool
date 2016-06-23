@@ -66,11 +66,15 @@
             {
                 Channel channel = new Channel(reader, this);
                 Channels.Add(channel);
+                ////      SortedChannels[channel.ID] = channel;
+                //Debug.Log(Time.time + "channel.ID=" + channel.ID);
                 SortedChannels.Add(channel.ID, channel);
             }
 
+            string head = reader.readStringNew(4);
+            //Debug.Log(Time.time + ",head=" + head);
             // read the header and verify it
-            if (new string(reader.ReadChars(4)) != "8BIM")
+            if (head != "8BIM")
             {
                 throw new IOException("Layer Channelheader error!");
             }
@@ -98,6 +102,7 @@
 
             // read the name
             Name = reader.ReadPascalString();
+            //Debug.Log(Time.time + ",read layer Name=" + Name + ".end");
 
             // read the adjustment info
             int count = (int)((reader.BaseStream.Position - position2) % 4L);
@@ -115,7 +120,6 @@
                     reader.BaseStream.Position = num4;
                 }
             }
-
 
             foreach (AdjustmentLayerInfo adjustmentLayerInfo in AdjustmentInfo)
             {
@@ -235,7 +239,16 @@
         /// <summary>
         /// Gets or sets the name of the layer.
         /// </summary>
-        public string Name { get; set; }
+        private string _name = "";
+        public string Name
+        {
+            get { return _name; }
+            set
+            {
+                _name = value;
+                //Debug.Log(Time.time + "               update layername=" + _name+".end");
+            }
+        }
 
         /// <summary>
         /// Gets the mask data for this layer.

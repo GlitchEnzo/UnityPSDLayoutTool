@@ -1,6 +1,6 @@
 fileFormatVersion: 2
-guid: 2e3221281f7bb884792720b2af73f22d
-timeCreated: 1466592482
+guid: 88f6079240c0fda47aa117a5b3f216a5
+timeCreated: 1466596501
 licenseType: Free
 TextureImporter:
   fileIDToRecycleName: {}
@@ -26,10 +26,10 @@ TextureImporter:
   cubemapConvolutionSteps: 7
   cubemapConvolutionExponent: 1.5
   seamlessCubemap: 0
-  textureFormat: -1
+  textureFormat: 4
   maxTextureSize: 2048
   textureSettings:
-    filterMode: -1
+    filterMode: 1
     aniso: -1
     mipBias: -1
     wrapMode: 1
@@ -44,14 +44,14 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
-  spritePixelsToUnits: 1
+  spritePixelsToUnits: 100
   alphaIsTransparency: 1
   textureType: 8
   buildTargetSettings: []
   spriteSheet:
     sprites: []
     outline: []
-  spritePackingTag: HeroCommon
+  spritePackingTag: 
   userData: 
   assetBundleName: 
   assetBundleVariant: 
