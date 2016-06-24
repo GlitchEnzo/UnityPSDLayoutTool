@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Collections.Specialized;
     using System.IO;
+    using System.Text;
     using UnityEngine;
 
     /// <summary>
@@ -67,8 +68,8 @@
             {
                 Channel channel = new Channel(reader, this);
                 Channels.Add(channel);
-               
-               //Debug.Log(Time.time + "channel.ID=" + channel.ID+",layer="+this.Name);
+
+                //Debug.Log(Time.time + "channel.ID=" + channel.ID+",layer="+this.Name);
                 SortedChannels.Add(channel.ID, channel);
             }
 
@@ -108,6 +109,8 @@
             // read the adjustment info
             int count = (int)((reader.BaseStream.Position - position2) % 4L);
             reader.ReadBytes(count);
+            //Debug.Log(Time.time + ",read count=" + count + ".end");
+
             AdjustmentInfo = new List<AdjustmentLayerInfo>();
             long num4 = position1 + num3;
             while (reader.BaseStream.Position < num4)
@@ -133,19 +136,15 @@
                     // read the unicode name
                     BinaryReverseReader dataReader = adjustmentLayerInfo.DataReader;
                     byte[] temp1 = dataReader.ReadBytes(3);
-                    byte charCount = dataReader.ReadByte();//很重要！！！限定读取字符串的长度
-
-                    Debug.Log("head=" + temp1[0] + "," + temp1[1] + "," + temp1[2] + ",charatarCount=" + charCount);
-
-                    Name = dataReader.ReadString(Convert.ToInt32(charCount)).TrimEnd(new char[1]);
+                    byte charCount = dataReader.ReadByte();
+                    //本来 charCount 是文本串的长度，可以传入ReadString()限定读取长度，但Text除串头无文本长度信息，因此改为读一段Unicode字符串
+                    Name = dataReader.ReadString().TrimEnd(new char[1]);
                     Debug.Log("Name=" + Name);
                 }
             }
-           
+
             reader.BaseStream.Position = num4;
         }
-
-       
 
         #region Properties
 
@@ -276,7 +275,6 @@
         private List<AdjustmentLayerInfo> AdjustmentInfo { get; set; }
 
         #endregion
-
         /// <summary>
         /// Reads the text information for the layer.
         /// </summary>
@@ -284,13 +282,17 @@
         private void ReadTextLayer(BinaryReverseReader dataReader)
         {
             IsTextLayer = true;
-
+            readTextOld(dataReader);
+        }
+         
+        private void readTextOld(BinaryReverseReader dataReader)
+        {
             // read the text layer's text string
             dataReader.Seek("/Text");
-            byte[] temp = dataReader.ReadBytes(4);
 
-            Debug.LogError("Position=" + dataReader.BaseStream.Position+ ",read text layer" + temp[0] + "," + temp[1] + "," + temp[2] + "," + temp[3]);
-            Text = dataReader.ReadString(0,true);
+            byte[] temp = dataReader.ReadBytes(4);//注意：解析的起点是对的，但是终点不对
+             
+            Text = dataReader.ReadString( true);
 
             //  read the text justification
             dataReader.Seek("/Justification");
@@ -339,7 +341,6 @@
                 string str = WarpStyle + dataReader.ReadChar();
                 WarpStyle = str;
             }
-            //Debug.Log(Time.time + "new text=" + Text + ",color=" + FillColor + ",Version5OrLaterBit=" + Version5OrLaterBit);
         }
     }
 }

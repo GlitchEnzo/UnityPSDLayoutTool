@@ -141,8 +141,8 @@
         /// <param name="reader">The reader containing the PSD file data</param>
         private void LoadHeader(BinaryReverseReader reader)
         {
-            string strHead = reader.readStringNew(4);
-            //Debug.Log(Time.time+ "read strHead="+ strHead);
+            string strHead = reader .readStringNew(4);
+             Debug.Log(Time.time+ "read strHead="+ strHead);
             if (strHead != "8BPS")
             {
                 UnityEngine.Debug.LogError("The given stream is not a valid PSD file");

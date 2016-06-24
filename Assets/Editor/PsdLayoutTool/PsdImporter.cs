@@ -476,17 +476,15 @@
         //TODO testButton
         public static void TestClick()
         {
-            //if (canvasObj == null)
+            //GameObject root = GameObject.Find("Canvas");
+
+            //if (root == null)
             //    return;
 
-            //for (int index = 0; index < canvasObj.transform.childCount; index++)
+            //for (int index = 0; index < root.transform.childCount; index++)
             //{
-            //    GameObject.Destroy(canvasObj.transform.GetChild(index));
+            //    GameObject.Destroy(root.transform.GetChild(index).gameObject);
             //}
-
-            //string testStr = "张43uiu";
-            //Stream stream =new 
-            //BinaryReader reader = new BinaryReader(new Stream(testStr));
         }
 
 
