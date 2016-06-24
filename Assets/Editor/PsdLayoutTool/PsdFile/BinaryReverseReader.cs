@@ -165,7 +165,7 @@
 
             List<byte> bytelist = new List<byte>();
 
-            Debug.Log(Time.time + "total length="+ BaseStream.Length + ",curpos="+BaseStream.Position);
+          //  Debug.Log(Time.time + "total length="+ BaseStream.Length + ",curpos="+BaseStream.Position);
 
             int readCount = 0;
             try
