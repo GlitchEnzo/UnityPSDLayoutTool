@@ -58,17 +58,16 @@
             }
 
 
-            //TextureImporter import = (TextureImporter)target;
-            //if (import.textureType != TextureImporterType.Sprite)
-            //{
-            //    import.textureType = TextureImporterType.Sprite;
-            //    import.mipmapEnabled = false;
-            //    //import.textureFormat = TextureImporterFormat.RGBA32;
-            //    import.filterMode = FilterMode.Bilinear;
-            //    import.SaveAndReimport();
-            //    import.textureFormat = TextureImporterFormat.AutomaticCompressed;
-            //    Debug.Log(Time.time + " focuse on cur image forse set Image as Sprite type！");
-            //}
+            TextureImporter import = (TextureImporter)target;
+            if (import.textureType != TextureImporterType.Sprite)
+            {
+                import.textureType = TextureImporterType.Sprite;
+                import.mipmapEnabled = false;
+                import.filterMode = FilterMode.Bilinear;
+                import.SaveAndReimport();
+                import.textureFormat = TextureImporterFormat.AutomaticCompressed;
+                Debug.Log(Time.time + " focuse on cur image forse set Image as Sprite type！");
+            }
         }
 
         /// <summary>

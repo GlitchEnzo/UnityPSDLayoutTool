@@ -142,7 +142,7 @@
         private void LoadHeader(BinaryReverseReader reader)
         {
             string strHead = reader.readStringNew(4);
-            Debug.Log(Time.time+ "read strHead="+ strHead);
+            //Debug.Log(Time.time+ "read strHead="+ strHead);
             if (strHead != "8BPS")
             {
                 UnityEngine.Debug.LogError("The given stream is not a valid PSD file");
@@ -150,7 +150,7 @@
             }
 
             Version = reader.ReadInt16();
-            Debug.Log(Time.time + "read version=" + Version);
+            //Debug.Log(Time.time + "read version=" + Version);
             if (Version != 1)
             {
                 UnityEngine.Debug.LogError("The PSD file has an invalid version");
@@ -163,7 +163,6 @@
             width = reader.ReadInt32();
             depth = reader.ReadInt16();
             ColorMode = (ColorModes)reader.ReadInt16();
-            Debug.Log(Time.time + "read width=" + width+ ",height="+ height+ ",ColorMode="+ ColorMode.ToString());
         }
 
         /// <summary>
@@ -260,30 +259,25 @@
         /// <param name="reader">The reader to use to read the layers.</param>
         private void LoadLayers(BinaryReverseReader reader)
         {
-        // long numnew = reader.ReadInt64();
-            //Debug.Log(Time.time + "LoadLayers numnew=" + numnew);
-
             int num1 =  reader.ReadInt32();//.ReadUInt32(); ;// reader.ReadUInt32();
-              Debug.Log(Time.time + "LoadLayers num1=" + num1 + ",return ?" + (num1 <= 0U));
+            //  Debug.Log(Time.time + "LoadLayers num1=" + num1 + ",return ?" + (num1 <= 0U));
 
-            //if (num1 <= 0U)
-            //{
-            //    return;
-            //}
+            if (num1 <= 0U)
+            {
+                return;
+            }
 
             long position = reader.BaseStream.Position;
-            //short num2 = reader.ReadInt16();
-            ushort num2 = reader.ReadUInt16();
+             short num2 = reader.ReadInt16();
             if (num2 < 0)
             {
                 AbsoluteAlpha = true;
-               // num2 = Math.Abs(num2);
+                 num2 = Math.Abs(num2);
             }
 
             Layers.Clear();
-            //yanruTODO测试
-            //num2 = 2;
-            Debug.Log(Time.time + "LoadLayers num2=" + num2 + ",return ?" + (num2 == 0));
+          
+            //Debug.Log(Time.time + "LoadLayers num2=" + num2 + ",return ?" + (num2 == 0));
             if (num2 == 0)
             {
                 return;

@@ -270,12 +270,7 @@
 
                 currentGroupGameObject = rootPsdGameObject;
             }
-
-            for (int index = 0; index < psd.Layers.Count; index++)
-            {
-                Debug.Log(Time.time + ",read psd.Layers=" + psd.Layers[index].Name);
-            }
-
+             
             List<Layer> tree = BuildLayerTree(psd.Layers);
             ExportTree(tree);
 
@@ -481,13 +476,17 @@
         //TODO testButton
         public static void TestClick()
         {
-            if (canvasObj == null)
-                return;
+            //if (canvasObj == null)
+            //    return;
 
-            for (int index = 0; index < canvasObj.transform.childCount; index++)
-            {
-                GameObject.Destroy(canvasObj.transform.GetChild(index));
-            }
+            //for (int index = 0; index < canvasObj.transform.childCount; index++)
+            //{
+            //    GameObject.Destroy(canvasObj.transform.GetChild(index));
+            //}
+
+            //string testStr = "张43uiu";
+            //Stream stream =new 
+            //BinaryReader reader = new BinaryReader(new Stream(testStr));
         }
 
 

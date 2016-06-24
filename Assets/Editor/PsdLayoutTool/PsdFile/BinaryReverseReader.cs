@@ -1,6 +1,7 @@
 ﻿namespace PhotoshopFile
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.IO;
     using System.Text;
@@ -146,29 +147,68 @@
             return Convert.ToSingle(str);
         }
 
+        //public string ReadStringCount(int charCount)
+        //{
+
+        //}
+
         /// <summary>
         /// Reads a string stored with a null byte preceding each character.
         /// </summary>
         /// <returns>The read string.</returns>
-        public override string ReadString()
-        {
+        public string ReadString(int charCount = 0, bool testPrintLog = false)
+        { 
             string str = string.Empty;
+
             List<byte> bytelist = new List<byte>();
 
+            Debug.Log(Time.time + "total length="+ BaseStream.Length + ",curpos="+BaseStream.Position);
+
+            int readCount = 0;
             try
             {
                 while (BaseStream.Position < BaseStream.Length)
                 {
-                    byte char1 = ReadByte();
-                    if (char1 == 0) //byte=0是ASCII码表中的空字符
+                    byte byte1 =  ReadByte();
+
+                    readCount++;
+                    if (byte1 == 0) //byte=0是ASCII码表中的空字符
                     {
-                        bytelist.Add(ReadByte());
+                        //字符为\u00bye
+                        byte byte2 = ReadByte();
+                        if (byte2 != 0) //高地位都为0的话就真的 没有字符
+                        {
+                            bytelist.Add(byte2);
+                            bytelist.Add(0);
+
+                            if (testPrintLog)
+                            {
+                                Debug.Log(Time.time + "add  0,,byte2=" + byte2 + ",position=" + BaseStream.Position);
+                            }
+                        }
                     }
                     else
                     {
-                        break;
+                        byte byte2 = ReadByte();
+
+                        if (byte2 != 0) 
+                        {
+                            bytelist.Add(byte2);
+                            bytelist.Add(byte1);
+
+                            if (testPrintLog)
+                            {
+                                Debug.Log(Time.time + "addbyte1=" + byte1 + ",byte2=" + byte2 + ",canadd?" + (byte2 != 0) +
+                                    ",position=" + BaseStream.Position);
+                            }
+                        }
+                        if (charCount ==0 || (charCount!=0  && readCount >= charCount))
+                        {
+                            break;
+                        }
                     }
                 }
+                 
 
             }
             catch (ArgumentException)
@@ -176,11 +216,30 @@
                 UnityEngine.Debug.LogError("An invalid character was found in the string.");
             }
 
+           
             byte[] res = new byte[bytelist.Count];
             for (int index = 0; index < bytelist.Count; index++)
                 res[index] = bytelist[index];
 
-            str = getEncodeStr(res);
+
+           
+            str=  new string(Encoding.Unicode.GetChars(res));
+
+            if (testPrintLog)
+            {
+                Debug.Log(" str=" + str);
+                for (int i = 0; i < res.Length; i++)
+                {
+                    Debug.Log("byte[" + i + "] =" + res[i]);
+                }
+            }
+
+            //String str111 = "张";
+            //byte[] testbyte = System.Text.Encoding.Unicode.GetBytes(str111);
+            //for (int i = 0; i < testbyte.Length; i++)
+            //{
+            //    Debug.Log("testbyte[" + i + "] =" + testbyte[i]);
+            //}
 
             return str;
         }

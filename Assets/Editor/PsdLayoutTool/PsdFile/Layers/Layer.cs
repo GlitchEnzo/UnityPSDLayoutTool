@@ -1,5 +1,6 @@
 ﻿namespace PhotoshopFile
 {
+    using System;
     using System.Collections.Generic;
     using System.Collections.Specialized;
     using System.IO;
@@ -66,8 +67,8 @@
             {
                 Channel channel = new Channel(reader, this);
                 Channels.Add(channel);
-                ////      SortedChannels[channel.ID] = channel;
-                //Debug.Log(Time.time + "channel.ID=" + channel.ID);
+               
+               //Debug.Log(Time.time + "channel.ID=" + channel.ID+",layer="+this.Name);
                 SortedChannels.Add(channel.ID, channel);
             }
 
@@ -131,9 +132,13 @@
                 {
                     // read the unicode name
                     BinaryReverseReader dataReader = adjustmentLayerInfo.DataReader;
-                    dataReader.ReadBytes(3);
-                    dataReader.ReadByte();
-                    Name = dataReader.ReadString().TrimEnd(new char[1]);
+                    byte[] temp1 = dataReader.ReadBytes(3);
+                    byte charCount = dataReader.ReadByte();//很重要！！！限定读取字符串的长度
+
+                    Debug.Log("head=" + temp1[0] + "," + temp1[1] + "," + temp1[2] + ",charatarCount=" + charCount);
+
+                    Name = dataReader.ReadString(Convert.ToInt32(charCount)).TrimEnd(new char[1]);
+                    Debug.Log("Name=" + Name);
                 }
             }
            
@@ -279,11 +284,13 @@
         private void ReadTextLayer(BinaryReverseReader dataReader)
         {
             IsTextLayer = true;
-            
+
             // read the text layer's text string
             dataReader.Seek("/Text");
-            dataReader.ReadBytes(4);
-            Text = dataReader.ReadString();
+            byte[] temp = dataReader.ReadBytes(4);
+
+            Debug.LogError("Position=" + dataReader.BaseStream.Position+ ",read text layer" + temp[0] + "," + temp[1] + "," + temp[2] + "," + temp[3]);
+            Text = dataReader.ReadString(0,true);
 
             //  read the text justification
             dataReader.Seek("/Justification");
@@ -317,7 +324,7 @@
             //  read the font name
             dataReader.Seek("/FontSet ");
             dataReader.Seek("/Name");
-            dataReader.ReadBytes(4);
+            //   byte [] temp1=    dataReader.ReadBytes(4);
             FontName = dataReader.ReadString();
 
             // read the warp style
