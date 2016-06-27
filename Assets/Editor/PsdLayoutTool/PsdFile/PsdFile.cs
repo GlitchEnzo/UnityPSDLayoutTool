@@ -142,7 +142,6 @@
         private void LoadHeader(BinaryReverseReader reader)
         {
             string strHead = reader .readStringNew(4);
-             Debug.Log(Time.time+ "read strHead="+ strHead);
             if (strHead != "8BPS")
             {
                 UnityEngine.Debug.LogError("The given stream is not a valid PSD file");
@@ -189,7 +188,7 @@
         {
             ImageResources.Clear();
             uint num = reader.ReadUInt32();
-            Debug.Log(Time.time + "LoadImageResources num="+ num);
+ 
             if (num <= 0U)
             {
                 return;
@@ -241,7 +240,6 @@
         {
             //long numnew = reader.ReadInt64();
             long num =   reader.ReadUInt32();
-            Debug.Log(Time.time + ",LoadLayerAndMaskInfo num=" + num);
             if (num <= 0U)
             {
                 return;

@@ -1,10 +1,12 @@
 ﻿namespace PhotoshopFile
 {
+    using PsdLayoutTool;
     using System;
     using System.Collections.Generic;
     using System.Collections.Specialized;
     using System.IO;
     using System.Text;
+    using System.Text.RegularExpressions;
     using UnityEngine;
 
     /// <summary>
@@ -42,6 +44,9 @@
         /// </summary>
         private BitVector32 flags;
 
+
+        static string testtotal = "";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Layer"/> class using the provided reader containing the PSD file data.
         /// </summary>
@@ -49,6 +54,7 @@
         /// <param name="psdFile">The PSD file to set as the parent.</param>
         public Layer(BinaryReverseReader reader, PsdFile psdFile)
         {
+
             Children = new List<Layer>();
             PsdFile = psdFile;
 
@@ -73,6 +79,14 @@
                 SortedChannels.Add(channel.ID, channel);
             }
 
+
+
+
+
+
+
+
+
             string head = reader.readStringNew(4);
             //Debug.Log(Time.time + ",head=" + head);
             // read the header and verify it
@@ -82,23 +96,30 @@
             }
 
             // read the blend mode key (unused) (defaults to "norm")
-            reader.ReadChars(4);
+            //reader.ReadChars(4);
+            string layerRecordsBlendModeKey = reader.readStringNew(4);
+
 
             // read the opacity
             Opacity = reader.ReadByte();
 
             // read the clipping (unused) (< 0 = base, > 0 = non base)
-            reader.ReadByte();
+            int Clipping = reader.ReadByte();
 
             // read all of the flags (protectTrans, visible, obsolete, ver5orLater, pixelDataIrrelevant)
             flags = new BitVector32(reader.ReadByte());
 
             // skip a padding byte
-            reader.ReadByte();
+            int Filler = reader.ReadByte();
+
+            //Debug.Log("layerRecordsBlendModeKey=" + layerRecordsBlendModeKey+
+            //    ",Opacity="+ Opacity+
+            //    ",Clipping=" + Clipping+",flags="+ flags+ ", Filler=" + Filler);
 
             uint num3 = reader.ReadUInt32();
             long position1 = reader.BaseStream.Position;
             MaskData = new Mask(reader, this);
+
             BlendingRangesData = new BlendingRanges(reader);
             long position2 = reader.BaseStream.Position;
 
@@ -113,6 +134,7 @@
 
             AdjustmentInfo = new List<AdjustmentLayerInfo>();
             long num4 = position1 + num3;
+
             while (reader.BaseStream.Position < num4)
             {
                 try
@@ -125,8 +147,13 @@
                 }
             }
 
+
+            string keyInfo = "";
             foreach (AdjustmentLayerInfo adjustmentLayerInfo in AdjustmentInfo)
             {
+
+                keyInfo += ",key=" + adjustmentLayerInfo.Key + "\n";
+
                 if (adjustmentLayerInfo.Key == "TySh")
                 {
                     ReadTextLayer(adjustmentLayerInfo.DataReader);
@@ -138,12 +165,277 @@
                     byte[] temp1 = dataReader.ReadBytes(3);
                     byte charCount = dataReader.ReadByte();
                     //本来 charCount 是文本串的长度，可以传入ReadString()限定读取长度，但Text除串头无文本长度信息，因此改为读一段Unicode字符串
-                    Name = dataReader.ReadString().TrimEnd(new char[1]);
-                    Debug.Log("Name=" + Name);
+                    Name = dataReader.ReadString();
+                    if (Name == "")
+                        Name = defaultLayerName;
+
+                }
+                else if (adjustmentLayerInfo.Key == "lrFX")//样式 相关，对于字体来说，就是描边之类的
+                {
+                    parseLrfxKeyword(adjustmentLayerInfo);//yanruTODO测试屏蔽
                 }
             }
 
+            //Debug.Log("layer="+Name+ ",Totalkey=\n" + keyInfo);
+
             reader.BaseStream.Position = num4;
+        }
+
+        //图层效果相关
+        private void parseLrfxKeyword(AdjustmentLayerInfo adjustmentLayerInfo)
+        {
+            BinaryReverseReader dataReader = adjustmentLayerInfo.DataReader;
+
+            int version = dataReader.ReadInt16();
+            int effectCount = dataReader.ReadInt16();
+            //Debug.Log("lrfx version=" + version + ",effectCount=" + effectCount);
+
+            string effectStr = "";
+
+            for (int index = 0; index < effectCount; index++)
+            {
+                string sigNature = dataReader.readStringNew(4);
+                string type = dataReader.readStringNew(4);
+                //Debug.Log("cur read type=" + type + ",sigNature=" + sigNature);
+
+                switch (type)
+                {
+                    case "cmnS"://OK
+                        int cmnsSize = dataReader.ReadInt32();
+                        int cmnsVersion = dataReader.ReadInt32();
+                        bool cmnsBool = dataReader.ReadBoolean();
+                        int cmnsUnused = dataReader.ReadInt16();
+
+                        Debug.Log("cmnsSize =" + cmnsSize+ ",cmnsBool="+ cmnsBool);
+                        break;
+                    case "dsdw"://可能有用
+                                //byte[] testbyte2 = dataReader.ReadBytes(55);
+                                //effectStr += "\n" + printbytes(testbyte2, "dsdw");
+                                //break;
+                    case "isdw":
+                        int dropSize = dataReader.ReadInt32();
+                        int dropVersion = dataReader.ReadInt32();
+                        int dropBlurValue = dataReader.ReadInt32();
+                        int Intensityasapercent = dataReader.ReadInt32();
+                        int angleindegrees = dataReader.ReadInt32();
+                        int distanceinp = dataReader.ReadInt32();
+
+                        byte[] colortest = dataReader.ReadBytes(10);
+
+                        //effectStr += printbytes(colortest, "isdw color test");
+
+                        dataReader.ReadBytes(4);
+                        string dropBlendmode = dataReader.readStringNew(4);
+
+                        bool dropeffectEnable = dataReader.ReadBoolean();
+                        byte usethisangle = dataReader.ReadByte();
+                        int dropOpacity = dataReader.ReadByte();
+
+
+                        int dropSpace11 = dataReader.ReadInt16();
+                        int color111 = dataReader.ReadInt16();
+                        int color211 = dataReader.ReadInt16();
+                        int color311 = dataReader.ReadInt16();
+                        int color411 = dataReader.ReadInt16();
+
+                        //Debug.Log("isdw "
+                        //    + ",dropSize=" + dropSize
+                        //    + ",dropVersion=" + dropVersion
+                        //    + ",dropBlurValue=" + dropBlurValue
+                        //    + ",Intensityasapercent=" + Intensityasapercent
+                        //    + ",angleindegrees=" + angleindegrees
+                        //    + ",distanceinp=" + distanceinp
+                        //    + ",dropBlendmode=" + dropBlendmode
+                        //    + ",dropeffectEnable=" + dropeffectEnable
+                        //    + ",usethisangle=" + usethisangle
+                        //    + ",dropOpacity=" + dropOpacity
+
+                        //    + ",dropSpace11=" + dropSpace11
+                        //    + ",color111=" + color111
+                        //    + ",color211=" + color211
+                        //    + ",color311=" + color311
+                        //    + ",color411=" + color411
+                        //    );
+
+                        dataReader.ReadBytes(4);
+                        dataReader.ReadBytes(4);
+                        dataReader.ReadBytes(4);
+                        dataReader.ReadBytes(4);
+                        dataReader.ReadBytes(4);
+                        dataReader.ReadBytes(4);
+                        effectStr += "\n" + dataReader.ReadBytes(10);
+                        string sign1 = dataReader.readStringNew(4);
+                        string key1 = dataReader.readStringNew(4);
+
+                        dataReader.ReadBytes(1);
+                        dataReader.ReadBytes(1);
+                        dataReader.ReadBytes(1);
+                        if (dropVersion == 2)
+                        {
+                            dataReader.ReadBytes(10);
+                        }
+
+                        break;
+                    case "oglw"://有用:字体的描边！
+                        int sizeofRemainItems = dataReader.ReadInt32();
+                        int oglwversion = dataReader.ReadInt32();
+
+                        byte[] blurdata = dataReader.ReadBytes(4);
+
+                        outLineDis = Convert.ToInt32(blurdata[1]); //也是小坑，四个故意放在第二个字节 也不说明( ▼-▼ )
+
+                        effectStr += printbytes(blurdata, "blurdata ");
+
+                        //int blurvalue = dataReader.ReadInt32();
+
+                        int intensityPercent = dataReader.ReadInt32();
+                         
+                        byte color_r = 0;
+                        byte color_g = 0;
+                        byte color_b = 0;
+                        byte color_a = 0;
+
+                        dataReader.ReadBytes(2);
+                        color_r = dataReader.ReadByte();
+                        dataReader.ReadByte();
+                        color_g = dataReader.ReadByte();
+                        dataReader.ReadByte();
+                        color_b = dataReader.ReadByte();
+                        dataReader.ReadByte();
+                        color_a = dataReader.ReadByte();
+                        dataReader.ReadByte();
+
+                        string curSign = dataReader.readStringNew(4);
+                        string key = dataReader.readStringNew(4);
+
+                        bool effectEnable = dataReader.ReadBoolean(); //yanruTODO 不可靠，如果整个effect 层 禁用了，子字段可能依然为true，暂时找不到上层effect开关
+
+
+                        byte opacityPercent = dataReader.ReadByte();//描边透明度
+
+                        if (oglwversion == 2)
+                        {
+                            byte[] oglwColor2 = dataReader.ReadBytes(10);
+                        }
+
+
+                        if (!effectEnable) //指明了没有描边
+                        {
+                            OutlineColor = new Color(0, 0, 0, 0);
+                        }
+                        else
+                        {
+                            OutlineColor = new Color(color_r / 255f, color_g / 255f, color_b / 255f, opacityPercent / 255f);
+                        }
+                        Debug.Log("sizeofRemainItems=" + sizeofRemainItems +
+                            ",oglwversion=" + oglwversion +
+                            //",blurvalue=" + blurvalue +
+                          
+                            ",intensityPercent=" + intensityPercent +
+                            ",curSign=" + curSign +
+                            ",key=" + key +
+
+                            ",color_r=" + color_r +
+                            ",color_g=" + color_g +
+                            ",color_b=" + color_b +
+                            ",color_a=" + color_a
+                             + ",effectEnable=" + effectEnable
+                             + ",opacityPercent=" + opacityPercent
+                             + ",outLineDis="+ outLineDis
+                            );
+                        break;
+                    case "iglw":
+                        byte[] testdata5 = dataReader.ReadBytes(47);
+                        //effectStr += "\n" + printbytes(testdata5, "iglw");
+
+                        //dataReader.ReadBytes(4);
+                        //dataReader.ReadBytes(4);
+                        //dataReader.ReadBytes(4);
+                        //dataReader.ReadBytes(4);
+                        //dataReader.ReadBytes(10);
+                        //dataReader.ReadBytes(8);
+                        //dataReader.ReadBytes(1);
+                        //dataReader.ReadBytes(1);
+                        //dataReader.ReadBytes(1);
+                        //dataReader.ReadBytes(10);
+                        break;
+                    case "bevl":
+
+                        int bevelSizeofRemain = dataReader.ReadInt32();//.ReadBytes(4);
+                        int bevelversion = dataReader.ReadInt32();
+                        //dataReader.ReadBytes(4);
+                        dataReader.ReadBytes(4);
+                        dataReader.ReadBytes(4);
+                        dataReader.ReadBytes(4);
+
+                        dataReader.ReadBytes(8);
+                        dataReader.ReadBytes(8);
+
+                        dataReader.ReadBytes(10);
+                        dataReader.ReadBytes(10);
+
+                        dataReader.ReadBytes(1);
+                        dataReader.ReadBytes(1);
+                        dataReader.ReadBytes(1);
+                        dataReader.ReadBytes(1);
+                        dataReader.ReadBytes(1);
+                        dataReader.ReadBytes(1);
+
+                        if (bevelversion == 2)
+                        {
+                            dataReader.ReadBytes(10);
+                            dataReader.ReadBytes(10);
+                        }
+
+                        //Debug.Log(" bevl bevelSizeofRemain=" + bevelSizeofRemain
+                        //  + ",bevelversion=" + bevelversion
+                        //    );
+
+                        break;
+                        //case "sofi":
+                        //    int solidSize = dataReader.ReadInt32();//.ReadBytes(4);
+                        //    int solidVersion = dataReader.ReadInt32();// (4);
+                        //    string solidBlendmode = dataReader.readStringNew(4);//.ReadBytes(4);
+
+                        //    byte[] solidColor = dataReader.ReadBytes(10);
+                        //    effectStr += printbytes(solidColor, "sofi solidColor");
+
+                        //    byte opacity = dataReader.ReadByte();
+
+                        //    byte solidenable = dataReader.ReadByte();
+
+                        //    //dataReader.ReadBytes(1);
+                        //    //dataReader.ReadBytes(1);
+
+                        //    dataReader.ReadBytes(10);
+
+                        //    Debug.Log("sofi  solidSize=" + solidSize
+                        //        + ",solidVersion=" + solidVersion
+                        //        + ",solidBlendmode=" + solidBlendmode
+                        //        + ",opacity=" + opacity
+                        //        + ",solidenable=" + solidenable
+                        //        );
+                        //    break;
+
+                }
+            }
+
+            Debug.Log("effectStr=" + effectStr);
+        }
+
+
+        private string printbytes(byte[] data, string infoHead = "", bool print = false)
+        {
+            string info = "subinfo, " + infoHead + "=\n";
+            for (int index = 0; index < data.Length; index++)
+            {
+                info += "data[" + index + "]=" + data[index] + "\n";
+            }
+            if (print)
+            {
+                Debug.Log(info);
+            }
+            return info;
         }
 
         #region Properties
@@ -179,6 +471,12 @@
         /// Gets the Fill Color of the text, if this is a text layer.
         /// </summary>
         public Color FillColor { get; private set; }
+
+        /// <summary>
+        /// 文本描边的颜色,透明度=0f表示没有描边
+        /// </summary>
+        public Color OutlineColor { get; private set; }
+        public int outLineDis = 1;//描边宽度
 
         /// <summary>
         /// Gets the style of warp done on the text, if it is a text layer.
@@ -240,17 +538,30 @@
             }
         }
 
+        public static Regex ZH_REG = new Regex(@"[\u4E00-\u9FBF]");
+
+
         /// <summary>
         /// Gets or sets the name of the layer.
         /// </summary>
         private string _name = "";
+        private static int _readIndex=0;
+
         public string Name
         {
             get { return _name; }
             set
             {
                 _name = value;
-                //Debug.Log(Time.time + "               update layername=" + _name+".end");
+            }
+        }
+
+        private static string defaultLayerName
+        {
+            get
+            {
+                _readIndex++;
+                return PsdImporter.NO_NAME_HEAD + _readIndex;
             }
         }
 
@@ -282,23 +593,18 @@
         private void ReadTextLayer(BinaryReverseReader dataReader)
         {
             IsTextLayer = true;
-            readTextOld(dataReader);
-        }
-         
-        private void readTextOld(BinaryReverseReader dataReader)
-        {
+             
             // read the text layer's text string
             dataReader.Seek("/Text");
-
             byte[] temp = dataReader.ReadBytes(4);//注意：解析的起点是对的，但是终点不对
-             
-            Text = dataReader.ReadString( true);
+            //Debug.Log("text layer temp[0]=" + temp[0] + ",temp[1]=" + temp[1] + ",temp[2]=" + temp[2]+",temp[3]=" + temp[3]);
+            Text = dataReader.ReadString();// ( true);
 
             //  read the text justification
             dataReader.Seek("/Justification");
-            int justification = dataReader.ReadByte() - 48;
+            int justification = dataReader.ReadByte();// - 48;
             Justification = TextJustification.Left;
-            if (justification == 1)
+            if (justification == 1) 
             {
                 Justification = TextJustification.Right;
             }
@@ -306,10 +612,11 @@
             {
                 Justification = TextJustification.Center;
             }
-
+            //Debug.Log("text layer justification=" + justification);
             // read the font size
             dataReader.Seek("/FontSize ");
             FontSize = dataReader.ReadFloat();
+            //Debug.Log("text layer FontSize=" + FontSize);
 
             // read the font fill color
             dataReader.Seek("/FillColor");
@@ -321,18 +628,22 @@
             float green = dataReader.ReadFloat();
             dataReader.ReadByte();
             float blue = dataReader.ReadFloat();
-            FillColor = new Color(red * byte.MaxValue / 255f, green * byte.MaxValue / 255f, blue * byte.MaxValue / 255f, alpha * byte.MaxValue / 255f);
-
+            FillColor = new Color(red  , green  , blue  , alpha  );
+            //Debug.Log("text text="+ Text + ",red=" + red + ",green=" + green + ",blue=" + blue+ ",alpha="+ alpha+",position="+dataReader.BaseStream.Position+ ", byte.MaxValue=" + byte.MaxValue);
+             
             //  read the font name
             dataReader.Seek("/FontSet ");
+
             dataReader.Seek("/Name");
-            //   byte [] temp1=    dataReader.ReadBytes(4);
+            
             FontName = dataReader.ReadString();
+            //Debug.Log("text layer FontName=" + FontName);
 
             // read the warp style
             dataReader.Seek("warpStyle");
             dataReader.Seek("warpStyle");
-            dataReader.ReadBytes(3);
+            byte [] wrapBytes=  dataReader.ReadBytes(3);
+
             int num13 = dataReader.ReadByte();
             WarpStyle = string.Empty;
 

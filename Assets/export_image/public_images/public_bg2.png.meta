@@ -1,6 +1,6 @@
 fileFormatVersion: 2
-guid: 0b517b7430ae72540950752a3e4f07a1
-timeCreated: 1466680776
+guid: f03d516f861bc364382f2f8ae2c6c9a1
+timeCreated: 1467021769
 licenseType: Free
 TextureImporter:
   fileIDToRecycleName: {}
@@ -44,14 +44,14 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
-  spritePixelsToUnits: 1
+  spritePixelsToUnits: 1.75
   alphaIsTransparency: 1
   textureType: 8
   buildTargetSettings: []
   spriteSheet:
     sprites: []
     outline: []
-  spritePackingTag: cc4
+  spritePackingTag: HeroCommon
   userData: 
   assetBundleName: 
   assetBundleVariant: 

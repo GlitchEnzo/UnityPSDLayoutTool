@@ -84,7 +84,7 @@
             textFont = TEST_FONT_NAME;//.otf";//yanru测试字体
 
             MaximumDepth = 1;
-            PixelsToUnits = 1;
+            PixelsToUnits = 1.75f;// 1.5f;// 75f;// 1;
         }
 
         /// <summary>
@@ -138,6 +138,7 @@
         /// </summary>
         public static Vector2 ScreenResolution = new Vector2(1280, 760);
 
+        public static Vector2 LargeImageAlarm =  new Vector2(512,512); //当小图尺寸宽/高超过 改尺寸 给警告 建议单独目录存放
 
         private static string _textFont = "";
 
@@ -235,7 +236,7 @@
 
             PsdFile psd = new PsdFile(fullPath);
             CanvasSize = ScreenResolution;
-            Debug.Log(Time.time + "update canvasSize as UI size=" + CanvasSize);
+            //Debug.Log(Time.time + "update canvasSize as UI size=" + CanvasSize);
             // Set the depth step based on the layer count.  If there are no layers, default to 0.1f.
             depthStep = psd.Layers.Count != 0 ? MaximumDepth / psd.Layers.Count : 0.1f;
 
@@ -257,7 +258,10 @@
 
                 //create ui Root
                 rootPsdGameObject = CreateObj(PsdName);
-                updateItemParent(rootPsdGameObject, canvasObj);
+                rootPsdGameObject.transform.SetParent(canvasObj.transform, false);
+                //rootPsdGameObject.transform.localScale = Vector3.one;
+
+                //updateItemParent(rootPsdGameObject, canvasObj);
 
                 RectTransform rectRoot = rootPsdGameObject.GetComponent<RectTransform>();
                 rectRoot.anchorMin = new Vector2(0, 0);
@@ -266,11 +270,12 @@
                 rectRoot.offsetMax = Vector2.zero;
 
                 Vector3 rootPos = Vector3.zero;
-                updateRectPosition(rootPsdGameObject, rootPos, true);
+                rootPsdGameObject.transform.position = Vector3.zero;
+                //updateRectPosition(rootPsdGameObject, rootPos, true);
 
                 currentGroupGameObject = rootPsdGameObject;
             }
-             
+
             List<Layer> tree = BuildLayerTree(psd.Layers);
             ExportTree(tree);
 
@@ -280,22 +285,90 @@
                 PrefabUtility.ReplacePrefab(rootPsdGameObject, prefab);
             }
 
-            int childCount = rootPsdGameObject.transform.childCount;
-            for (int index = 0; index < childCount; index++)
-            {
-                Transform tran = rootPsdGameObject.transform.GetChild(index);
-                tran.position += new Vector3(ScreenResolution.x / 2f, ScreenResolution.y / 2f, 0);
-            }
-
             //step1:刷新按钮SpriteState，删除按钮状态Image
             updateBtnsSpriteState();
 
             //step2:最后删除多余的图片aaa(1),aaa(1)_highlight这种。并调整引用
             DeleteExtraImages();
 
+            //step3:矫正 scale问题 
+            Transform[] allChilds = rootPsdGameObject.GetComponentsInChildren<Transform>();
+            recetRectSize(allChilds);
+
+            //step4: 刷新九宫格图片
+            resetSlicedImage(allChilds);
+
+            //step4:最后矫正 UI根节点坐标
+            resetRootRect();
 
             AssetDatabase.Refresh();
-            Debug.Log(Time.time + ",dealUI=" + rootPsdGameObject.name + ",finish,time="+Time.time);
+            Debug.Log(Time.time + ",dealUI=" + rootPsdGameObject.name + ",finish,time=" + Time.time);
+        }
+
+        private static void resetRootRect()
+        {
+            RectTransform root_rect = rootPsdGameObject.GetComponent<RectTransform>();
+            root_rect.anchorMin = Vector2.zero;
+            root_rect.anchorMax = new Vector2(1, 1);
+            root_rect.offsetMin = Vector2.zero;
+            root_rect.offsetMax = Vector2.zero;
+        }
+
+        private static void resetSlicedImage(Transform[] allChilds)
+        {
+            for (int index = 0; index < allChilds.Length; index++)
+            {
+                Transform tran = allChilds[index];
+                //update image sprite deltaSize and PNG attribute
+                if (_useRealImageSize == false)
+                {
+                    Image image = tran.GetComponent<Image>();
+                    if (image != null && image.sprite != null)
+                    {
+                        string spriteName = image.sprite.name;
+
+                        //match str end with number_number,will used as sliced Image
+                        string str1 = spriteName;
+                        Regex reg = new Regex(@"\d+[_]\d+$");
+                        Match match = reg.Match(str1);
+                        Vector2 layoutSize = Vector2.zero;
+                        if (match.ToString() != "")
+                        {
+                            string[] size = reg.Match(str1).ToString().Split('_');
+                            layoutSize.x = Convert.ToInt32(size[0]);
+                            layoutSize.y = Convert.ToInt32(size[1]);
+                        }
+                        if (layoutSize.x != 0 && layoutSize.y != 0)
+                        {
+                            image.GetComponent<RectTransform>().sizeDelta = layoutSize;
+                            image.type = Image.Type.Sliced;
+
+                            if (image.sprite.border == Vector4.zero)
+                            {
+                                Debug.LogError(Time.time + "need to set png=" + image.sprite.name + ",slice border");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void recetRectSize(Transform[] allChilds)
+        {
+            for (int index = 0; index < allChilds.Length; index++)
+            {
+                RectTransform rect = allChilds[index].GetComponent<RectTransform>();
+                if (rect == null)
+                    continue;
+
+                rect.transform.localScale = Vector3.one;
+                Vector2 curSize = rect.sizeDelta;
+                curSize.x *= PixelsToUnits;// rect.transform.localScale.x;
+                curSize.y *= PixelsToUnits;// rect.transform.localScale.y;
+
+                //Debug.Log("update image=" + rect.name + ",cursize=" + rect.sizeDelta + ",newSize=" + curSize);
+                rect.sizeDelta = curSize;
+            }
         }
 
         //删除未引用图片
@@ -307,7 +380,7 @@
                 string pathtemp = imgaePathList[index];
                 if (spriteNameExtra(pathtemp) != "")
                 {
-                    Debug.Log(Time.time + "需要删除多余资源 url=" + pathtemp);
+                    Debug.Log(Time.time + "will 删除多余资源 url=" + pathtemp);
                     File.Delete(pathtemp);
                 }
             }
@@ -343,33 +416,7 @@
                 {
                     Transform tran = allChild[index];
 
-                    //update image sprite deltaSize and PNG attribute
-                    if (_useRealImageSize == false)
-                    {
-                        Image image = tran.GetComponent<Image>();
-                        if (image != null && image.sprite != null)
-                        {
-                            string spriteName = image.sprite.name;
-
-                            //match str end with number_number,will used as sliced Image
-                            string str1 = spriteName; // "4343434";// "testrewer_4_3";
-                            Regex reg = new Regex(@"\d+[_]\d+$");
-                            Match match = reg.Match(str1);
-                            if (match.ToString() != "")
-                            {
-                                string[] size = reg.Match(str1).ToString().Split('_');
-                                int width = Convert.ToInt32(size[0]);
-                                int height = Convert.ToInt32(size[0]);
-                                image.GetComponent<RectTransform>().sizeDelta = new Vector2(width, height);
-                                image.type = Image.Type.Sliced;
-
-                                if (image.sprite.border == Vector4.zero)
-                                {
-                                    Debug.LogError(Time.time + "need to set png=" + image.sprite.name + ",slice border");
-                                }
-                            }
-                        }
-                    }
+                  
 
                     if (allChild[index].name.IndexOf(btnName) == 0)
                     {
@@ -710,8 +757,9 @@
                 {
                     currentGroupGameObject = CreateObj(layer.Name);
 
-                    updateItemParent(currentGroupGameObject, oldGroupObject);
-
+                    //updateItemParent(currentGroupGameObject, oldGroupObject);
+                    currentGroupGameObject.transform.SetParent(oldGroupObject.transform, false);
+                    //currentGroupGameObject.transform.localScale = Vector3.one;
                 }
 
                 ExportTree(layer.Children);
@@ -812,13 +860,16 @@
                 if (layerName.Contains(PUBLIC_IMG_HEAD))//common images
                 {
                     int length = writePath.Length - 1;
-                    if (writePath.LastIndexOf(@"\") != -1)
-                        length = writePath.LastIndexOf(@"\");
+                    if (writePath.LastIndexOf(@"/") != -1)
+                        length = writePath.LastIndexOf(@"/");
 
                     writePath = writePath.Substring(0, length);
+
+                    //Debug.Log(Time.time + "writepath=" + writePath);
                     writePath += PUBLIC_IMG_PATH;
                 }
 
+          
                 //output path not exist, create one
                 if (!Directory.Exists(writePath))
                 {
@@ -826,6 +877,12 @@
                 }
 
                 file = Path.Combine(writePath, layerName + ".png");
+
+                Vector2 size = layer.Rect.size;
+                if (size.x >= LargeImageAlarm.x || size.y >= LargeImageAlarm.y)
+                {
+                    Debug.Log(Time.time + "图片=" + file+",尺寸="+size+"较大！考虑单拆图集！");
+                }
 
                 File.WriteAllBytes(file, texture.EncodeToPNG());
             }
@@ -865,9 +922,14 @@
             {
                 string file = CreatePNG(layer);
                 sprite = ImportSprite(GetRelativePath(file), packingTag);
-                _imageDic.Add(file, sprite);
-                //Debug.Log(Time.time + "CreateSprite layername=" + layer.Name + ",file=" + file + ",sprite null?" + (sprite == null));
+
+                if (!_imageDic.ContainsKey(file))
+                {
+                    _imageDic.Add(file, sprite);
+                    //Debug.Log(Time.time + "CreateSprite layername=" + layer.Name + ",file=" + file + ",sprite null?" + (sprite == null));
+                }
             }
+
             return sprite;
         }
 
@@ -879,7 +941,7 @@
         /// <returns>The imported image as a <see cref="Sprite"/> object.</returns>
         private static Sprite ImportSprite(string relativePathToSprite, string packingTag)
         {
-            string temp = relativePathToSprite.Replace(IMG_TAIL, "");
+            //string temp = relativePathToSprite.Replace(IMG_TAIL, "");
             //if (temp.EndsWith(@"\"))
             //{
             //    temp += NO_NAME_HEAD + _nullImageIndex;
@@ -909,14 +971,14 @@
             return sprite;
         }
  
-        private static void updateRectPosition(GameObject rect, Vector3 position, bool isRoot = false)
-        {
-            rect.GetComponent<RectTransform>().anchoredPosition = position; 
-            _positionDic[rect] = position;
+        //private static void updateRectPosition(GameObject rect, Vector3 position, bool isRoot = false)
+        //{
+        //    rect.GetComponent<RectTransform>().anchoredPosition = position; 
+        //    _positionDic[rect] = position;
 
-            //showLog(",update rect=" + rect.name + ",position=" + position + ",isRoot?" + isRoot +
-            //    ",parentisRoot?" + ((rect.transform.parent == rootPsdGameObject.transform)));
-        }
+        //    //showLog(",update rect=" + rect.name + ",position=" + position + ",isRoot?" + isRoot +
+        //    //    ",parentisRoot?" + ((rect.transform.parent == rootPsdGameObject.transform)));
+        //}
 
         private static GameObject CreateObj(string objName)
         {
@@ -1059,21 +1121,18 @@
             float height = layer.Rect.height / PixelsToUnits;
 
             GameObject gameObject = CreateObj(layer.Name);
-            updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
-
-            updateItemParent(gameObject, currentGroupGameObject);
+            
+            gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+            gameObject.transform.parent = currentGroupGameObject.transform;//, true);
 
             // if the current group object actually has a position (not a normal Photoshop folder layer), then offset the position accordingly
-            updateRectPosition(gameObject, new Vector3(gameObject.transform.position.x + currentGroupGameObject.transform.position.x,
-                gameObject.transform.position.y + currentGroupGameObject.transform.position.y, gameObject.transform.position.z));
-
+            gameObject.transform.position = new Vector3(gameObject.transform.position.x + currentGroupGameObject.transform.position.x, gameObject.transform.position.y + currentGroupGameObject.transform.position.y, gameObject.transform.position.z);
+        
             currentDepth -= depthStep;
 
             Image image = gameObject.AddComponent<Image>();
             image.sprite = CreateSprite(layer);
-
-           
-
+             
             image.raycastTarget = false; //can not click Image by yanru 2016-06-16 19:26:55
 
             RectTransform transform = gameObject.GetComponent<RectTransform>();
@@ -1109,11 +1168,14 @@
             float width = layer.Rect.width / PixelsToUnits;
             float height = layer.Rect.height / PixelsToUnits;
 
+            //Debug.Log("text= layer="+layer.Name+",width="+width+",height="+height);
             GameObject gameObject = CreateObj(layer.Name);
- 
-            updateItemParent(gameObject, currentGroupGameObject);
- 
-            updateRectPosition(gameObject, new Vector3(x + (width / 2), y - (height / 2), currentDepth));
+             
+            //updateItemParent(gameObject, currentGroupGameObject);
+            gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+
+            gameObject.transform.SetParent(currentGroupGameObject.transform, false); //.transform);
+            //gameObject.transform.localScale = Vector3.one;
 
             currentDepth -= depthStep;
 
@@ -1129,27 +1191,27 @@
 
             textUI.text = layer.Text;
             textUI.font = font;
+            textUI.horizontalOverflow = HorizontalWrapMode.Overflow;//yanruTODO修改
             textUI.verticalOverflow = VerticalWrapMode.Overflow;
             textUI.rectTransform.sizeDelta = new Vector2(width, height);
             textUI.raycastTarget = false;//can not  click text by yanru 2016-06-16 19:27:41
 
+            //描边信息
+            if(layer.OutlineColor.a !=0f)
+            {
+                Outline outline = textUI.GetComponent<Outline>();
+                if (outline == null)
+                    outline = textUI.gameObject.AddComponent<Outline>();
+
+                outline.effectColor = layer.OutlineColor;
+                outline.effectDistance =new Vector2(layer.outLineDis, layer.outLineDis);
+            }
+
             float fontSize = layer.FontSize / PixelsToUnits;
             float ceiling = Mathf.Ceil(fontSize);
-            if (fontSize < ceiling)
-            {
-                // Unity UI Text doesn't support floating point font sizes, so we have to round to the next size and scale everything else
-                float scaleFactor = ceiling / fontSize;
-                textUI.fontSize = (int)ceiling;
-                textUI.rectTransform.sizeDelta *= scaleFactor;
 
-                //Debug.Log(Time.time + "set txt=" + textUI.name + ",scale=" + textUI.rectTransform.localScale / scaleFactor + ",factor=" + scaleFactor);
-                updateRectScale(textUI, textUI.rectTransform.localScale / scaleFactor);
-            }
-            else
-            {
-                textUI.fontSize = (int)fontSize;
-            }
-
+            //Debug.Log(" font size=" + fontSize+ ",ceiling=" + ceiling);
+            textUI.fontSize = (int)fontSize;
             textUI.color = color;
             textUI.alignment = TextAnchor.MiddleCenter;
             
@@ -1181,18 +1243,7 @@
             }
             return font;
         }
-
-        private static void updateItemParent(GameObject gameObject, GameObject father)
-        {
-            gameObject.transform.SetParent(father.transform);
-            gameObject.transform.localScale = Vector3.one;
-        }
-
-        private static void updateRectScale(Text textUI, Vector3 newScale)
-        {
-            textUI.rectTransform.localScale = newScale;
-        }
-
+         
         /// <summary>
         /// Creates a <see cref="UnityEngine.UI.Button"/> from the given <see cref="Layer"/>.
         /// </summary>

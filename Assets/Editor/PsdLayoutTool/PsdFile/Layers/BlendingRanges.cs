@@ -1,4 +1,6 @@
-﻿namespace PhotoshopFile
+﻿using UnityEngine;
+
+namespace PhotoshopFile
 {
     /// <summary>
     /// The blending ranges for a layer
@@ -19,7 +21,14 @@
             }
 
             // read the data
-            reader.ReadBytes(count);
+       byte [] data=     reader.ReadBytes(count);
+
+            //string info = "BlendingRanges data=\n";
+            //for (int index = 0; index < data.Length; index++)
+            //{
+            //    info += "data[" + index + "]=" + data[index] + "\n";
+            //}
+            //Debug.Log(info);
         }
     }
 }

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 public class UnicodeCheckTool : MonoBehaviour {
 
-    public static Regex EN_REG = new Regex(@"[a-zA-Z0-9]");
+    public static Regex EN_REG = new Regex(@"[a-zA-Z0-9]"); 
 
     // Use this for initialization
     void Start()
@@ -24,8 +24,6 @@ public class UnicodeCheckTool : MonoBehaviour {
         //Debug.Log("str=" + str1);
         
     }
-
-
 
     private bool isChinese(byte[] item)
     {

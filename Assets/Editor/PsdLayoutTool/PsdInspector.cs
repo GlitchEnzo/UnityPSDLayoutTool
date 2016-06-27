@@ -97,11 +97,14 @@
                     //PsdImporter.UseUnityUI = EditorGUILayout.Toggle(useUnityUILabel, PsdImporter.UseUnityUI);
 
                     //set ui width and height;       
-                    GUIContent screenSize = new GUIContent("screenResolution", "set canvas width and height");
+                    GUIContent screenSize = new GUIContent("屏幕分辨率", "UI 宽*高");
                     PsdImporter.ScreenResolution = EditorGUILayout.Vector2Field(screenSize, PsdImporter.ScreenResolution);
 
+                    GUIContent imageSizeLimit = new GUIContent("小图限制(超过该尺寸 建议拆分图集)", "小图尺寸限制(超过该尺寸 建议拆出图集)");
+                    PsdImporter.LargeImageAlarm = EditorGUILayout.Vector2Field(imageSizeLimit, PsdImporter.LargeImageAlarm);
+
                     //set textFont
-                    GUIContent fontName = new GUIContent("fontName", "use font on UI");
+                    GUIContent fontName = new GUIContent("字体名称", "字体名称");
                     PsdImporter.textFont = EditorGUILayout.TextField(fontName, PsdImporter.textFont);
 
                     //force use fullScreenUI
