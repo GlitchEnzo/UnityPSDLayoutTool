@@ -31,5 +31,7 @@
         /// Descriptor (see See Descriptor structure) Information about the origin path data.
         /// </summary>
         PsCCOrignPathInfo = 3000,
+
+        TransparencyIndex= 1047,
     }
 }

@@ -3,16 +3,14 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
     using System.Text;
     using System.Text.RegularExpressions;
     using PhotoshopFile;
     using UnityEditor;
-    using UnityEditorInternal;
     using UnityEngine;
     using UnityEngine.EventSystems;
     using UnityEngine.UI;
-    using System.Collections;
+
     /// <summary>
     /// Handles all of the importing for a PSD file (exporting textures, creating prefabs, etc).
     /// </summary>
@@ -136,7 +134,7 @@
         /// <summary>
         /// full ui size
         /// </summary>
-        public static Vector2 ScreenResolution = new Vector2(1280, 760);
+        public static Vector2 ScreenResolution = new Vector2(1136,640);// new Vector2(1280, 760);
 
         public static Vector2 LargeImageAlarm =  new Vector2(512,512); //当小图尺寸宽/高超过 改尺寸 给警告 建议单独目录存放
 
@@ -444,7 +442,6 @@
                 }
             }
 
-
             //delete no use items
             for (int index = 0; index < deleteList.Count; index++)
             {
@@ -470,10 +467,11 @@
                 }
                 Sprite normalSprite = button.GetComponent<Image>().sprite;
                 normalSprite = rescriteBtnSprite(canUseSpriteList, normalSprite);
+                button.GetComponent<Image>().sprite = normalSprite;
 
+                //Debug.Log("刷新按钮=" + button.name + "normal null?" + (normalSprite == null));
                 button.spriteState = sprite;
             }
-
         }
 
         private static Sprite rescriteBtnSprite(List<Sprite> canUseSpriteList,   Sprite sprite)
@@ -1132,8 +1130,15 @@
 
             Image image = gameObject.AddComponent<Image>();
             image.sprite = CreateSprite(layer);
-             
             image.raycastTarget = false; //can not click Image by yanru 2016-06-16 19:26:55
+
+            // 对于Image，如果当前图层指定了透明度，刷新透明度
+            if (layer.imageTransparent <= 1f)
+            {
+                Color imageColor = image.color;
+                imageColor.a = layer.imageTransparent;
+                image.color = imageColor;
+            }
 
             RectTransform transform = gameObject.GetComponent<RectTransform>();
             updateRectSize(ref transform, width, height);
@@ -1197,13 +1202,13 @@
             textUI.raycastTarget = false;//can not  click text by yanru 2016-06-16 19:27:41
 
             //描边信息
-            if(layer.OutlineColor.a !=0f)
+            if(layer.TextOutlineColor.a !=0f)
             {
                 Outline outline = textUI.GetComponent<Outline>();
                 if (outline == null)
                     outline = textUI.gameObject.AddComponent<Outline>();
 
-                outline.effectColor = layer.OutlineColor;
+                outline.effectColor = layer.TextOutlineColor;
                 outline.effectDistance =new Vector2(layer.outLineDis, layer.outLineDis);
             }
 

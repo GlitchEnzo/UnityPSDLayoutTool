@@ -75,17 +75,9 @@
                 Channel channel = new Channel(reader, this);
                 Channels.Add(channel);
 
-                //Debug.Log(Time.time + "channel.ID=" + channel.ID+",layer="+this.Name);
+                //Debug.Log(Time.time + "channel.ID=" + channel.ID + ",layer=" + this.Name);
                 SortedChannels.Add(channel.ID, channel);
             }
-
-
-
-
-
-
-
-
 
             string head = reader.readStringNew(4);
             //Debug.Log(Time.time + ",head=" + head);
@@ -98,8 +90,7 @@
             // read the blend mode key (unused) (defaults to "norm")
             //reader.ReadChars(4);
             string layerRecordsBlendModeKey = reader.readStringNew(4);
-
-
+             
             // read the opacity
             Opacity = reader.ReadByte();
 
@@ -112,9 +103,13 @@
             // skip a padding byte
             int Filler = reader.ReadByte();
 
-            //Debug.Log("layerRecordsBlendModeKey=" + layerRecordsBlendModeKey+
-            //    ",Opacity="+ Opacity+
-            //    ",Clipping=" + Clipping+",flags="+ flags+ ", Filler=" + Filler);
+            imageTransparent =Convert.ToSingle( Opacity) / byte.MaxValue;
+            Debug.Log("layerRecordsBlendModeKey=" + layerRecordsBlendModeKey
+                + ",Opacity=" + Opacity
+                + ",Clipping=" + Clipping
+                + ",flags=" + flags
+                + ", Filler=" + Filler
+                + ",LayerTransparent=" + imageTransparent);
 
             uint num3 = reader.ReadUInt32();
             long position1 = reader.BaseStream.Position;
@@ -151,7 +146,6 @@
             string keyInfo = "";
             foreach (AdjustmentLayerInfo adjustmentLayerInfo in AdjustmentInfo)
             {
-
                 keyInfo += ",key=" + adjustmentLayerInfo.Key + "\n";
 
                 if (adjustmentLayerInfo.Key == "TySh")
@@ -170,13 +164,27 @@
                         Name = defaultLayerName;
 
                 }
+                //此处针对字体  图层样式
                 else if (adjustmentLayerInfo.Key == "lrFX")//样式 相关，对于字体来说，就是描边之类的
                 {
                     parseLrfxKeyword(adjustmentLayerInfo);//yanruTODO测试屏蔽
                 }
+                //仅对于图片的 
+                else if (adjustmentLayerInfo.Key== "lspf")
+                {
+                    BinaryReverseReader dataReader = adjustmentLayerInfo.DataReader;
+                    byte[] data = dataReader.ReadBytes(4);
+                    printbytes(data, "lspf data", true);
+                }
+                else if(adjustmentLayerInfo.Key == "lclr")
+                {
+                    BinaryReverseReader dataReader = adjustmentLayerInfo.DataReader;
+                    byte[] data = dataReader.ReadBytes(10);
+                    printbytes(data, "lclr data", true);
+                }
             }
 
-            //Debug.Log("layer="+Name+ ",Totalkey=\n" + keyInfo);
+            Debug.Log("layer="+Name+ ",Totalkey=\n" + keyInfo);
 
             reader.BaseStream.Position = num4;
         }
@@ -221,9 +229,7 @@
                         int distanceinp = dataReader.ReadInt32();
 
                         byte[] colortest = dataReader.ReadBytes(10);
-
-                        //effectStr += printbytes(colortest, "isdw color test");
-
+                         
                         dataReader.ReadBytes(4);
                         string dropBlendmode = dataReader.readStringNew(4);
 
@@ -237,25 +243,6 @@
                         int color211 = dataReader.ReadInt16();
                         int color311 = dataReader.ReadInt16();
                         int color411 = dataReader.ReadInt16();
-
-                        //Debug.Log("isdw "
-                        //    + ",dropSize=" + dropSize
-                        //    + ",dropVersion=" + dropVersion
-                        //    + ",dropBlurValue=" + dropBlurValue
-                        //    + ",Intensityasapercent=" + Intensityasapercent
-                        //    + ",angleindegrees=" + angleindegrees
-                        //    + ",distanceinp=" + distanceinp
-                        //    + ",dropBlendmode=" + dropBlendmode
-                        //    + ",dropeffectEnable=" + dropeffectEnable
-                        //    + ",usethisangle=" + usethisangle
-                        //    + ",dropOpacity=" + dropOpacity
-
-                        //    + ",dropSpace11=" + dropSpace11
-                        //    + ",color111=" + color111
-                        //    + ",color211=" + color211
-                        //    + ",color311=" + color311
-                        //    + ",color411=" + color411
-                        //    );
 
                         dataReader.ReadBytes(4);
                         dataReader.ReadBytes(4);
@@ -290,19 +277,19 @@
 
                         int intensityPercent = dataReader.ReadInt32();
                          
-                        byte color_r = 0;
-                        byte color_g = 0;
-                        byte color_b = 0;
-                        byte color_a = 0;
+                        byte outline_r = 0;
+                        byte outline_g = 0;
+                        byte outline_b = 0;
+                        byte outline_a = 0;
 
                         dataReader.ReadBytes(2);
-                        color_r = dataReader.ReadByte();
+                        outline_r = dataReader.ReadByte();
                         dataReader.ReadByte();
-                        color_g = dataReader.ReadByte();
+                        outline_g = dataReader.ReadByte();
                         dataReader.ReadByte();
-                        color_b = dataReader.ReadByte();
+                        outline_b = dataReader.ReadByte();
                         dataReader.ReadByte();
-                        color_a = dataReader.ReadByte();
+                        outline_a = dataReader.ReadByte();
                         dataReader.ReadByte();
 
                         string curSign = dataReader.readStringNew(4);
@@ -321,24 +308,23 @@
 
                         if (!effectEnable) //指明了没有描边
                         {
-                            OutlineColor = new Color(0, 0, 0, 0);
+                            TextOutlineColor = new Color(0, 0, 0, 0);
                         }
                         else
                         {
-                            OutlineColor = new Color(color_r / 255f, color_g / 255f, color_b / 255f, opacityPercent / 255f);
+                            TextOutlineColor = new Color(outline_r / 255f, outline_g / 255f, outline_b / 255f, opacityPercent / 255f);
                         }
                         Debug.Log("sizeofRemainItems=" + sizeofRemainItems +
                             ",oglwversion=" + oglwversion +
-                            //",blurvalue=" + blurvalue +
-                          
+                        
                             ",intensityPercent=" + intensityPercent +
                             ",curSign=" + curSign +
                             ",key=" + key +
 
-                            ",color_r=" + color_r +
-                            ",color_g=" + color_g +
-                            ",color_b=" + color_b +
-                            ",color_a=" + color_a
+                            ",color_r=" + outline_r +
+                            ",color_g=" + outline_g +
+                            ",color_b=" + outline_b +
+                            ",color_a=" + outline_a
                              + ",effectEnable=" + effectEnable
                              + ",opacityPercent=" + opacityPercent
                              + ",outLineDis="+ outLineDis
@@ -386,11 +372,7 @@
                             dataReader.ReadBytes(10);
                             dataReader.ReadBytes(10);
                         }
-
-                        //Debug.Log(" bevl bevelSizeofRemain=" + bevelSizeofRemain
-                        //  + ",bevelversion=" + bevelversion
-                        //    );
-
+                        
                         break;
                         //case "sofi":
                         //    int solidSize = dataReader.ReadInt32();//.ReadBytes(4);
@@ -416,7 +398,6 @@
                         //        + ",solidenable=" + solidenable
                         //        );
                         //    break;
-
                 }
             }
 
@@ -475,8 +456,13 @@
         /// <summary>
         /// 文本描边的颜色,透明度=0f表示没有描边
         /// </summary>
-        public Color OutlineColor { get; private set; }
+        public Color TextOutlineColor { get; private set; }
         public int outLineDis = 1;//描边宽度
+
+        /// <summary>
+        /// 对于图片 :图层透明图<1f按图层透明度来，否则，按照填充透明度的值来
+        /// </summary>
+        public float imageTransparent = 1f;
 
         /// <summary>
         /// Gets the style of warp done on the text, if it is a text layer.

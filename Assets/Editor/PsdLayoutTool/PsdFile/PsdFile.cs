@@ -224,6 +224,9 @@
                     case ResourceIDs.PsCCPathSelectionState:
                         imgRes = new AlphaChannels(imgRes);
                         break;
+                    case ResourceIDs.TransparencyIndex:
+                        Debug.Log("have transparent ");
+                        break;
                 }
 
                 ImageResources.Add(imgRes);
