@@ -40,33 +40,19 @@ Special Tags
 ==========
 Layers can have special tags applied to them that flags them to have the layout tool perform special operations on them.
 
-### Group Layer Tags ###
-
-|        Tag        | Description |
-| ----------------- | ----------- |
-|  &#124;Animation  |  Creates a Sprite animation using all of the children layers as frames |
-|  &#124;FPS=##     |  The number of frames per second to use for a Sprite animation.  Defaults to 30 if not present  | 
-|  &#124;Button     |  Creates a Button object using any tagged children layers as the button states |
+following keywords with test image named 'aaa':
 
 ### Art Layer Tags ###
 
-|        Tag          | Description |
+|       Head Keyword          | Description |
 | -----------------   | ----------- |
-|  &#124;Disabled     |  Represents the disabled state of a button     |
-|  &#124;Highlighted  |  Represents the highlighted state of a button  | 
-|  &#124;Pressed      |  Represents the pressed state of a button  | 
-|  &#124;Default      |  Represents the default/enabled/normal/up state of a button  | 
-|  &#124;Enabled      |  Represents the default/enabled/normal/up state of a button  |
-|  &#124;Normal       |  Represents the default/enabled/normal/up state of a button  |
-|  &#124;Up           |  Represents the default/enabled/normal/up state of a button  |
-|  &#124;Text         |  Represents a **texture** that is the text of a button (normal text layers import without this tag)  |
+|  btn_aaa    |  normal texture of button aaa     |
+|  _highlight  |  clicked texture of button aaa  | 
+|  _disable  |  disabled texture of button aaa  |  
 
 Photoshop Compatibility
 =======================
 Photoshop's "Smart Objects" are not supported, and therefore must be flattened/rasterized in Photoshop before attempting to import.
 
-1. Click **Layer** in the Photoshop menu
-2. Click **Rasterize**
-3. Click **All Layers**
+##### * attention: psd text layer can not be "Rasterized", or text in  layer will be export as an Image
 
-![](screenshots/photoshop.jpg?raw=true)
