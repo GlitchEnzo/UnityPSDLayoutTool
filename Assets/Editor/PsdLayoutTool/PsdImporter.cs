@@ -23,13 +23,13 @@
         public const string BTN_HEAD = "btn_";              //button normal image keyword
         public const string BTN_TAIL_HIGH = "_highlight";   //button highilght image keyward
         public const string BTN_TAIL_DIS = "_disable";      //buttno disable image keyword
-         
+
         public const string PUBLIC_IMG_HEAD = "public_";    //public images that more than one UI may use
 
         //sliced image type, image name like aaa_330_400,image name end with width and height,
         //Image will layout as sizeDelta=(330,440),rather than current image reak size
 
-        private const string PUBLIC_IMG_PATH =  @"\public_images";//public images relative path
+        private const string PUBLIC_IMG_PATH = @"\public_images";//public images relative path
 
 
         public const string PSD_TAIL = ".psd";
@@ -134,9 +134,9 @@
         /// <summary>
         /// full ui size
         /// </summary>
-        public static Vector2 ScreenResolution = new Vector2(1136,640);// new Vector2(1280, 760);
+        public static Vector2 ScreenResolution = new Vector2(1136, 640);// new Vector2(1280, 760);
 
-        public static Vector2 LargeImageAlarm =  new Vector2(512,512); //当小图尺寸宽/高超过 改尺寸 给警告 建议单独目录存放
+        public static Vector2 LargeImageAlarm = new Vector2(512, 512); //当小图尺寸宽/高超过 改尺寸 给警告 建议单独目录存放
 
         private static string _textFont = "";
 
@@ -196,7 +196,7 @@
         /// Lays out sprites in the current scene to match the PSD's layout.  Each layer is exported as Sprite-type textures in the project's assets.
         /// </summary>
         /// <param name="assetPath">The path of to the .psd file relative to the project.</param>
-        public static void LayoutInCurrentScene(string assetPath,bool useCurImageSize = false)
+        public static void LayoutInCurrentScene(string assetPath, bool useCurImageSize = false)
         {
             LayoutInScene = true;
             CreatePrefab = false;
@@ -257,10 +257,7 @@
                 //create ui Root
                 rootPsdGameObject = CreateObj(PsdName);
                 rootPsdGameObject.transform.SetParent(canvasObj.transform, false);
-                //rootPsdGameObject.transform.localScale = Vector3.one;
-
-                //updateItemParent(rootPsdGameObject, canvasObj);
-
+             
                 RectTransform rectRoot = rootPsdGameObject.GetComponent<RectTransform>();
                 rectRoot.anchorMin = new Vector2(0, 0);
                 rectRoot.anchorMax = new Vector2(1, 1);
@@ -356,10 +353,10 @@
             for (int index = 0; index < allChilds.Length; index++)
             {
                 RectTransform rect = allChilds[index].GetComponent<RectTransform>();
+                allChilds[index].transform.localScale = Vector3.one;
                 if (rect == null)
                     continue;
 
-                rect.transform.localScale = Vector3.one;
                 Vector2 curSize = rect.sizeDelta;
                 curSize.x *= PixelsToUnits;// rect.transform.localScale.x;
                 curSize.y *= PixelsToUnits;// rect.transform.localScale.y;
@@ -414,7 +411,7 @@
                 {
                     Transform tran = allChild[index];
 
-                  
+
 
                     if (allChild[index].name.IndexOf(btnName) == 0)
                     {
@@ -474,7 +471,7 @@
             }
         }
 
-        private static Sprite rescriteBtnSprite(List<Sprite> canUseSpriteList,   Sprite sprite)
+        private static Sprite rescriteBtnSprite(List<Sprite> canUseSpriteList, Sprite sprite)
         {
             string extra = spriteNameExtra(sprite.name);
             if (extra != "")
@@ -502,7 +499,7 @@
             }
         }
 
-        private static string  spriteNameExtra(string itemName)
+        private static string spriteNameExtra(string itemName)
         {
             Regex reg = new Regex(@"[(]+\d+[)]");
             string tempLayerName = itemName;
@@ -521,6 +518,7 @@
         //TODO testButton
         public static void TestClick()
         {
+            Debug.Log(",图层所有名字=\n" + Layer.total);
             //GameObject root = GameObject.Find("Canvas");
 
             //if (root == null)
@@ -571,7 +569,7 @@
                     }
                     else if (currentGroupLayer != null)
                     {
-                    //    Debug.Log(Time.time + ",add layer currentGroupLayer.name=" + currentGroupLayer.Name);
+                        //    Debug.Log(Time.time + ",add layer currentGroupLayer.name=" + currentGroupLayer.Name);
                         tree.Add(currentGroupLayer);
                         currentGroupLayer = null;
                     }
@@ -595,7 +593,7 @@
                     }
                     else
                     {
-                  //      Debug.Log(Time.time + ",add layer layer.name=" + layer.Name);
+                        //      Debug.Log(Time.time + ",add layer layer.name=" + layer.Name);
                         tree.Add(layer);
                     }
                 }
@@ -617,16 +615,18 @@
         /// <returns>The fixed layer name</returns>
         private static string MakeNameSafe(string name)
         {
-            // replace all special characters with an underscore
-            Regex pattern = new Regex("[/:&.<>,$¢;+]");
-            string newName = pattern.Replace(name, "_");
+            return name;
 
-            if (name != newName)
-            {
-                Debug.Log(string.Format("Layer name \"{0}\" was changed to \"{1}\"", name, newName));
-            }
+            //// replace all special characters with an underscore
+            //Regex pattern = new Regex("[/:&.<>,$¢;+]");
+            //string newName = pattern.Replace(name, "_");
 
-            return newName;
+            //if (name != newName)
+            //{
+            //    Debug.Log(string.Format("Layer name \"{0}\" was changed to \"{1}\"", name, newName));
+            //}
+
+            //return newName;
         }
 
         /// <summary>
@@ -748,16 +748,12 @@
                 string oldPath = currentPath;
                 GameObject oldGroupObject = currentGroupGameObject;
 
-                //       currentPath = Path.Combine(currentPath, layer.Name);
                 createDic(currentPath);
 
                 if (LayoutInScene || CreatePrefab)
                 {
                     currentGroupGameObject = CreateObj(layer.Name);
-
-                    //updateItemParent(currentGroupGameObject, oldGroupObject);
                     currentGroupGameObject.transform.SetParent(oldGroupObject.transform, false);
-                    //currentGroupGameObject.transform.localScale = Vector3.one;
                 }
 
                 ExportTree(layer.Children);
@@ -832,7 +828,7 @@
             {
                 // it is a text layer
                 if (LayoutInScene || CreatePrefab)
-                { 
+                {
                     CreateUIText(layer);
                 }
             }
@@ -854,7 +850,7 @@
 
                 string writePath = currentPath;
                 string layerName = trimSpecialHead(layer.Name);
-                
+
                 if (layerName.Contains(PUBLIC_IMG_HEAD))//common images
                 {
                     int length = writePath.Length - 1;
@@ -867,7 +863,7 @@
                     writePath += PUBLIC_IMG_PATH;
                 }
 
-          
+
                 //output path not exist, create one
                 if (!Directory.Exists(writePath))
                 {
@@ -879,7 +875,7 @@
                 Vector2 size = layer.Rect.size;
                 if (size.x >= LargeImageAlarm.x || size.y >= LargeImageAlarm.y)
                 {
-                    Debug.Log(Time.time + "图片=" + file+",尺寸="+size+"较大！考虑单拆图集！");
+                    Debug.Log(Time.time + "图片=" + file + ",尺寸=" + size + "较大！考虑单拆图集！");
                 }
 
                 File.WriteAllBytes(file, texture.EncodeToPNG());
@@ -888,7 +884,7 @@
             return file;
         }
 
-        private  static string trimSpecialHead(string str)
+        private static string trimSpecialHead(string str)
         {
             if (str.IndexOf(BTN_HEAD) == 0)
                 return str.Replace(BTN_HEAD, "");
@@ -968,7 +964,7 @@
             Sprite sprite = (Sprite)AssetDatabase.LoadAssetAtPath(relativePathToSprite, typeof(Sprite));
             return sprite;
         }
- 
+
         //private static void updateRectPosition(GameObject rect, Vector3 position, bool isRoot = false)
         //{
         //    rect.GetComponent<RectTransform>().anchoredPosition = position; 
@@ -980,62 +976,26 @@
 
         private static GameObject CreateObj(string objName)
         {
+            string res = "";
+            char[] charData = objName.ToCharArray();
+            for (int i = 0; i < charData.Length; i++)
+            {
+                if (charData[i] >= 0x4e00 && charData[i] <= 0x9fbb)
+                {
+                    res += "n"; ;
+                }
+                else
+                    res += charData[i];
+            }
+
+            Debug.Log("创建objname=" + objName + ",res="+ res);
+            objName = res;
+
             GameObject obj = new GameObject(objName);
             obj.AddComponent<RectTransform>();
             return obj;
         }
          
-        /// <summary>
-        /// Creates an <see cref="AnimationClip"/> of a sprite animation using the given <see cref="Sprite"/> frames and frames per second.
-        /// </summary>
-        /// <param name="name">The name of the animation to create.</param>
-        /// <param name="sprites">The list of <see cref="Sprite"/> objects making up the frames of the animation.</param>
-        /// <param name="fps">The frames per second for the animation.</param>
-        /// <returns>The newly constructed <see cref="AnimationClip"/></returns>
-        private static AnimationClip CreateSpriteAnimationClip(string name, IList<Sprite> sprites, float fps)
-        {
-            float frameLength = 1f / fps;
-
-            AnimationClip clip = new AnimationClip();
-            clip.name = name;
-            clip.frameRate = fps;
-            clip.wrapMode = WrapMode.Loop;
-
-            // The AnimationClipSettings cannot be set in Unity (as of 4.6) and must be editted via SerializedProperty
-            // from: http://forum.unity3d.com/threads/can-mecanim-animation-clip-properties-be-edited-in-script.251772/
-            SerializedObject serializedClip = new SerializedObject(clip);
-            SerializedProperty serializedSettings = serializedClip.FindProperty("m_AnimationClipSettings");
-            serializedSettings.FindPropertyRelative("m_LoopTime").boolValue = true;
-            serializedClip.ApplyModifiedProperties();
-
-            EditorCurveBinding curveBinding = new EditorCurveBinding();
-            curveBinding.type = typeof(SpriteRenderer);
-            curveBinding.propertyName = "m_Sprite";
-
-            ObjectReferenceKeyframe[] keyFrames = new ObjectReferenceKeyframe[sprites.Count];
-
-            for (int i = 0; i < sprites.Count; i++)
-            {
-                ObjectReferenceKeyframe kf = new ObjectReferenceKeyframe();
-                kf.time = i * frameLength;
-                kf.value = sprites[i];
-                keyFrames[i] = kf;
-            }
-
-#if UNITY_5
-            AnimationUtility.SetObjectReferenceCurve(clip, curveBinding, keyFrames);
-#else // Unity 4
-            AnimationUtility.SetAnimationType(clip, ModelImporterAnimationType.Generic);
-            AnimationUtility.SetObjectReferenceCurve(clip, curveBinding, keyFrames);
-
-            clip.ValidateIfRetargetable(true);
-#endif
-
-            AssetDatabase.CreateAsset(clip, GetRelativePath(currentPath) + "/" + name + ".anim");
-
-            return clip;
-        }
-
         #endregion
 
         #region Unity UI
@@ -1119,13 +1079,14 @@
             float height = layer.Rect.height / PixelsToUnits;
 
             GameObject gameObject = CreateObj(layer.Name);
-            
+
             gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
-            gameObject.transform.parent = currentGroupGameObject.transform;//, true);
+            //gameObject.transform.parent = currentGroupGameObject.transform;//, true);
+            gameObject.transform.SetParent(currentGroupGameObject.transform, false); //.transform);
 
             // if the current group object actually has a position (not a normal Photoshop folder layer), then offset the position accordingly
             gameObject.transform.position = new Vector3(gameObject.transform.position.x + currentGroupGameObject.transform.position.x, gameObject.transform.position.y + currentGroupGameObject.transform.position.y, gameObject.transform.position.z);
-        
+
             currentDepth -= depthStep;
 
             Image image = gameObject.AddComponent<Image>();
@@ -1142,7 +1103,7 @@
 
             RectTransform transform = gameObject.GetComponent<RectTransform>();
             updateRectSize(ref transform, width, height);
-          
+
             return image;
         }
 
@@ -1175,13 +1136,11 @@
 
             //Debug.Log("text= layer="+layer.Name+",width="+width+",height="+height);
             GameObject gameObject = CreateObj(layer.Name);
-             
-            //updateItemParent(gameObject, currentGroupGameObject);
+
+
             gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
-
             gameObject.transform.SetParent(currentGroupGameObject.transform, false); //.transform);
-            //gameObject.transform.localScale = Vector3.one;
-
+            
             currentDepth -= depthStep;
 
             Font font = getFontInfo();
@@ -1202,14 +1161,14 @@
             textUI.raycastTarget = false;//can not  click text by yanru 2016-06-16 19:27:41
 
             //描边信息
-            if(layer.TextOutlineColor.a !=0f)
+            if (layer.TextOutlineColor.a != 0f)
             {
                 Outline outline = textUI.GetComponent<Outline>();
                 if (outline == null)
                     outline = textUI.gameObject.AddComponent<Outline>();
 
                 outline.effectColor = layer.TextOutlineColor;
-                outline.effectDistance =new Vector2(layer.outLineDis, layer.outLineDis);
+                outline.effectDistance = new Vector2(layer.outLineDis, layer.outLineDis);
             }
 
             float fontSize = layer.FontSize / PixelsToUnits;
@@ -1219,7 +1178,7 @@
             textUI.fontSize = (int)fontSize;
             textUI.color = color;
             textUI.alignment = TextAnchor.MiddleCenter;
-            
+
             switch (layer.Justification)
             {
                 case TextJustification.Left:
@@ -1237,7 +1196,7 @@
         private static Font getFontInfo()
         {
             Font font = null;
-            
+
             if (textFont.Contains(TEST_FONT_NAME))
             {
                 font = Resources.Load<Font>(textFont);
@@ -1248,7 +1207,7 @@
             }
             return font;
         }
-         
+
         /// <summary>
         /// Creates a <see cref="UnityEngine.UI.Button"/> from the given <see cref="Layer"/>.
         /// </summary>
@@ -1258,15 +1217,15 @@
             // create an empty Image object with a Button behavior attached
             Image image = CreateUIImage(layer);
         }
-         
+
         private static void updateLayerName(Layer child, string newName)
         {
             child.Name = newName;
         }
 
-        private static void  showLog(string str)
+        private static void showLog(string str)
         {
-            Debug.Log(Time.time + ":"+str);
+            Debug.Log(Time.time + ":" + str);
         }
         #endregion
     }
