@@ -1,0 +1,36 @@
+{
+  "name": "com.igt.psdsimplelayout",
+  "displayName": "PSD Simple Layout (Unity 6.1+)",
+  "version": "2.0.0-unity6.1-plus",
+  "unity": "2022.3",
+  "unityRelease": "0f1",
+  "dependencies": {
+    "com.unity.textmeshpro": "3.2.0-pre.1"
+  },
+  "description": "A lightweight Photoshop Unity import tool with TextMeshPro integration for rapid prototyping and scene building. Optimized for Unity 6.1+ and Unity 2022.3+ LTS with modern shader support, automatic font import, advanced blend modes, layer effects, and comprehensive Unity UI support. Includes latest Unity features and performance optimizations.",
+  "keywords": [
+    "PSD",
+    "PSD Layout",
+    "Photoshop",
+    "Import",
+    "Sprites",
+    "Layout",
+    "Animation",
+    "Editor",
+    "TextMeshPro",
+    "Fonts",
+    "BlendModes",
+    "UI"
+  ],
+  "category": "2D",
+  "author": {
+    "name": "Greg Moyle",
+    "email": "greg.moyle@igt.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gmoyle/UnityPSDLayoutTool.git"
+  },
+  "license": "MIT",
+  "type": "tool"
+}

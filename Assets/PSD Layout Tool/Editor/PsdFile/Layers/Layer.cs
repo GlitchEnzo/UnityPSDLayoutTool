@@ -1,10 +1,10 @@
-﻿namespace PhotoshopFile
-{
-    using System.Collections.Generic;
-    using System.Collections.Specialized;
-    using System.IO;
-    using UnityEngine;
+﻿using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
+using UnityEngine;
 
+namespace PhotoshopFile
+{
     /// <summary>
     /// Contains the data representation of a PSD layer
     /// </summary>
@@ -75,8 +75,8 @@
                 throw new IOException("Layer Channelheader error!");
             }
 
-            // read the blend mode key (unused) (defaults to "norm")
-            reader.ReadChars(4);
+            // read the blend mode key
+            BlendModeKey = new string(reader.ReadChars(4));
 
             // read the opacity
             Opacity = reader.ReadByte();
@@ -188,6 +188,21 @@
         public bool HasEffects { get; set; }
 
         /// <summary>
+        /// Gets or sets the layer effects/styles applied to this layer.
+        /// </summary>
+        public PsdLayoutTool.LayerEffects LayerEffects { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the adjustment layer effects applied to this layer.
+        /// </summary>
+        public PsdLayoutTool.AdjustmentLayerEffects AdjustmentEffects { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the smart filters applied to this layer.
+        /// </summary>
+        public PsdLayoutTool.SmartFilters SmartFilters { get; set; }
+
+        /// <summary>
         /// Gets the rectangle containing the contents of the layer.
         /// </summary>
         public Rect Rect { get; private set; }
@@ -206,6 +221,11 @@
         /// Gets the opacity of this layer.  0 = transparent and 255 = opaque/solid.
         /// </summary>
         public byte Opacity { get; private set; }
+
+        /// <summary>
+        /// Gets the blend mode key for this layer (e.g., "norm", "mult", "scrn").
+        /// </summary>
+        public string BlendModeKey { get; private set; }
 
         /// <summary>
         /// Gets a value indicating whether this layer is visible or not.
@@ -252,7 +272,7 @@
         /// <summary>
         /// Gets or sets the list of adjustment information for this layer.
         /// </summary>
-        private List<AdjustmentLayerInfo> AdjustmentInfo { get; set; }
+        public List<AdjustmentLayerInfo> AdjustmentInfo { get; set; }
 
         #endregion
 

@@ -1,7 +1,9 @@
-﻿namespace PhotoshopFile
+﻿using System.Collections.Specialized;
+using UnityEngine;
+
+
+namespace PhotoshopFile
 {
-    using System.Collections.Specialized;
-    using UnityEngine;
 
     /// <summary>
     /// The mask data for a layer

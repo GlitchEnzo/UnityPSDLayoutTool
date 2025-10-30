@@ -1,9 +1,9 @@
-﻿namespace PsdLayoutTool
-{
-    using System;
-    using UnityEditor;
-    using UnityEngine;
+﻿using System;
+using UnityEditor;
+using UnityEngine;
 
+namespace PsdLayoutTool
+{
     /// <summary>
     /// A custom Inspector to allow PSD files to be turned into prefabs and separate textures per layer.
     /// </summary>
