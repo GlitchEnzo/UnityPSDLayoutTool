@@ -1,11 +1,12 @@
-﻿namespace PhotoshopFile
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Xml;
+using System.Xml.Linq;
+
+namespace PhotoshopFile
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
-    using System.Xml;
-    using System.Xml.Linq;
 
     /// <summary>
     /// A class that represents a loaded PSD file.

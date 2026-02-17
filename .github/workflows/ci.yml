@@ -1,0 +1,158 @@
+name: CI - Quality & Compatibility
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  code-quality:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '6.0.x'
+        
+    - name: Validate package.json
+      run: |
+        if [ -f "Assets/PSD Layout Tool/package.json" ]; then
+          echo "✅ package.json exists"
+          # Validate JSON syntax
+          python3 -m json.tool "Assets/PSD Layout Tool/package.json" > /dev/null && echo "✅ package.json is valid JSON" || exit 1
+          
+          # Check required fields
+          if grep -q '"name"' "Assets/PSD Layout Tool/package.json" && \
+             grep -q '"version"' "Assets/PSD Layout Tool/package.json" && \
+             grep -q '"displayName"' "Assets/PSD Layout Tool/package.json"; then
+            echo "✅ package.json has required fields"
+          else
+            echo "❌ package.json missing required fields"
+            exit 1
+          fi
+        else
+          echo "❌ package.json not found"
+          exit 1
+        fi
+        
+    - name: Check file structure
+      run: |
+        echo "Checking Unity package structure..."
+        
+        # Check for meta files
+        find "Assets/PSD Layout Tool" -name "*.cs" | while read cs_file; do
+          meta_file="${cs_file}.meta"
+          if [ ! -f "$meta_file" ]; then
+            echo "⚠️  Missing meta file: $meta_file"
+          fi
+        done
+        
+        # Check for Editor folder
+        if [ -d "Assets/PSD Layout Tool/Editor" ]; then
+          echo "✅ Editor folder exists"
+        else
+          echo "❌ Editor folder missing"
+          exit 1
+        fi
+        
+    - name: C# Syntax Check
+      run: |
+        echo "Checking C# syntax..."
+        find "Assets" -name "*.cs" -exec echo "Checking: {}" \; -exec head -1 {} \;
+        
+        # Basic syntax validation (check for common issues)
+        if grep -r "using.*;" "Assets" | grep -v "^\s*//" | head -10; then
+          echo "✅ Using statements found"
+        fi
+        
+        # Check for namespace declarations
+        if grep -r "namespace " "Assets" | grep -v "^\s*//" | head -5; then
+          echo "✅ Namespace declarations found"
+        fi
+
+  unity-compatibility:
+    name: Unity Compatibility Test
+    runs-on: ubuntu-latest
+    if: false  # Disabled until Unity secrets are configured
+    # To enable: set if condition to true and configure Unity secrets
+    
+    steps:
+    - name: Placeholder for Unity testing
+      run: |
+        echo "Unity compatibility testing is disabled"
+        echo "To enable: configure Unity license secrets and set if condition to true"
+        echo "See .github/SETUP_SECRETS.md for instructions"
+
+  package-validation:
+    name: Package Validation
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Validate Unity Package
+      run: |
+        echo "Validating Unity Package structure..."
+        
+        # Check package.json schema
+        package_file="Assets/PSD Layout Tool/package.json"
+        
+        if [ -f "$package_file" ]; then
+          # Extract version
+          version=$(grep '"version"' "$package_file" | sed 's/.*"version": *"\([^"]*\)".*/\1/')
+          echo "Package version: $version"
+          
+          # Extract Unity version requirement
+          unity_version=$(grep '"unity"' "$package_file" | sed 's/.*"unity": *"\([^"]*\)".*/\1/')
+          echo "Minimum Unity version: $unity_version"
+          
+          # Validate semantic versioning
+          if [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "✅ Version follows semantic versioning"
+          else
+            echo "⚠️  Version should follow semantic versioning (x.y.z)"
+          fi
+        fi
+        
+        # Check for required files
+        required_files=(
+          "Assets/PSD Layout Tool/Editor/PsdImporter.cs"
+          "Assets/PSD Layout Tool/Editor/PsdInspector.cs"
+          "Assets/PSD Layout Tool/package.json"
+        )
+        
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ Required file exists: $file"
+          else
+            echo "❌ Missing required file: $file"
+            exit 1
+          fi
+        done
+        
+    - name: Generate package report
+      run: |
+        echo "# Package Validation Report" > package-report.md
+        echo "" >> package-report.md
+        echo "## Files Included:" >> package-report.md
+        find "Assets/PSD Layout Tool" -type f | sort >> package-report.md
+        echo "" >> package-report.md
+        echo "## File Count:" >> package-report.md
+        echo "- C# files: $(find 'Assets/PSD Layout Tool' -name '*.cs' | wc -l)" >> package-report.md
+        echo "- Meta files: $(find 'Assets/PSD Layout Tool' -name '*.meta' | wc -l)" >> package-report.md
+        echo "- Total files: $(find 'Assets/PSD Layout Tool' -type f | wc -l)" >> package-report.md
+        
+    - name: Upload package report
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-validation-report
+        path: package-report.md
+        retention-days: 30

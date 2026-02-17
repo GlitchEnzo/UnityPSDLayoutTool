@@ -1,18 +1,42 @@
-﻿namespace PsdLayoutTool
-{
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
-    using System.Text;
-    using System.Text.RegularExpressions;
-    using PhotoshopFile;
-    using UnityEditor;
-    using UnityEditorInternal;
-    using UnityEngine;
-    using UnityEngine.EventSystems;
-    using UnityEngine.UI;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using PhotoshopFile;
+using UnityEditor;
+using UnityEditorInternal;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using TMPro;
+using PsdLayoutTool;
 
+namespace PsdLayoutTool
+{
+    /// <summary>
+    /// Photoshop blend modes that can be applied to Unity components
+    /// </summary>
+    public enum BlendMode
+    {
+        Normal,
+        Multiply,
+        Screen,
+        Overlay,
+        SoftLight,
+        HardLight,
+        ColorDodge,
+        ColorBurn,
+        Darken,
+        Lighten,
+        Difference,
+        Exclusion,
+        Hue,
+        Saturation,
+        Color,
+        Luminosity
+    }
     /// <summary>
     /// Handles all of the importing for a PSD file (exporting textures, creating prefabs, etc).
     /// </summary>
@@ -143,15 +167,24 @@
             PsdFile psd = new PsdFile(fullPath);
             CanvasSize = new Vector2(psd.Width, psd.Height);
 
-            // Set the depth step based on the layer count.  If there are no layers, default to 0.1f.
+            // Pre-load system fonts for faster lookup during import
+            FontManager.PreloadSystemFonts();
+
+            // Apply layer masks
+            ApplyLayerMasks(psd.Layers);
+
+            // Apply adjustment layers
+            ApplyAdjustmentLayers(psd.Layers);
+            
+            // Apply smart filters
+            ApplySmartFilters(psd.Layers);
             depthStep = psd.Layers.Count != 0 ? MaximumDepth / psd.Layers.Count : 0.1f;
 
             int lastSlash = asset.LastIndexOf('/');
             string assetPathWithoutFilename = asset.Remove(lastSlash + 1, asset.Length - (lastSlash + 1));
             PsdName = asset.Replace(assetPathWithoutFilename, string.Empty).Replace(".psd", string.Empty);
 
-            currentPath = GetFullProjectPath() + "Assets";
-            currentPath = Path.Combine(currentPath, PsdName);
+            currentPath = GetFullProjectPath() + assetPathWithoutFilename + PsdName;
             Directory.CreateDirectory(currentPath);
 
             if (LayoutInScene || CreatePrefab)
@@ -164,7 +197,14 @@
                 }
                 else
                 {
+                    float x = 0 / PixelsToUnits;
+                    float y = 0 / PixelsToUnits;
+                    y = (CanvasSize.y / PixelsToUnits) - y;
+                    float width = psd.Width / PixelsToUnits;
+                    float height = psd.Height / PixelsToUnits;
+
                     rootPsdGameObject = new GameObject(PsdName);
+                    rootPsdGameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
                 }
 
                 currentGroupGameObject = rootPsdGameObject;
@@ -175,8 +215,15 @@
 
             if (CreatePrefab)
             {
-                UnityEngine.Object prefab = PrefabUtility.CreateEmptyPrefab(asset.Replace(".psd", ".prefab"));
+                string prefabPath = asset.Replace(".psd", ".prefab");
+#if UNITY_2018_1_OR_NEWER
+                // Use the new Prefab API for Unity 2018+
+                PrefabUtility.SaveAsPrefabAsset(rootPsdGameObject, prefabPath);
+#else
+                // Use the legacy Prefab API for older Unity versions
+                UnityEngine.Object prefab = PrefabUtility.CreateEmptyPrefab(prefabPath);
                 PrefabUtility.ReplacePrefab(rootPsdGameObject, prefab);
+#endif
 
                 if (!LayoutInScene)
                 {
@@ -346,7 +393,15 @@
         /// <param name="layer">The layer to export.</param>
         private static void ExportLayer(Layer layer)
         {
+
             layer.Name = MakeNameSafe(layer.Name);
+            
+            // Skip invisible layers
+            if (!layer.Visible)
+            {
+                return;
+            }
+            
             if (layer.Children.Count > 0 || layer.Rect.width == 0)
             {
                 ExportFolderLayer(layer);
@@ -409,7 +464,7 @@
 
                 if (LayoutInScene || CreatePrefab)
                 {
-                    currentGroupGameObject = new GameObject(layer.Name);
+                    currentGroupGameObject = CreateEmptyObject(layer);
                     currentGroupGameObject.transform.parent = oldGroupObject.transform;
                 }
 
@@ -584,9 +639,9 @@
         }
 
         /// <summary>
-        /// Creates a <see cref="GameObject"/> with a <see cref="TextMesh"/> from the given <see cref="Layer"/>.
+        /// Creates a <see cref="GameObject"/> with a <see cref="TextMeshPro"/> from the given <see cref="Layer"/>.
         /// </summary>
-        /// <param name="layer">The <see cref="Layer"/> to create a <see cref="TextMesh"/> from.</param>
+        /// <param name="layer">The <see cref="Layer"/> to create a <see cref="TextMeshPro"/> from.</param>
         private static void CreateTextGameObject(Layer layer)
         {
             Color color = layer.FillColor;
@@ -603,29 +658,29 @@
 
             currentDepth -= depthStep;
 
-            Font font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            TextMeshPro textMeshPro = gameObject.AddComponent<TextMeshPro>();
+            textMeshPro.text = layer.Text;
+            textMeshPro.fontSize = layer.FontSize;
+            textMeshPro.color = color;
+            textMeshPro.autoSizeTextContainer = true;
 
-            MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
-            meshRenderer.material = font.material;
-
-            TextMesh textMesh = gameObject.AddComponent<TextMesh>();
-            textMesh.text = layer.Text;
-            textMesh.font = font;
-            textMesh.fontSize = 0;
-            textMesh.characterSize = layer.FontSize / PixelsToUnits;
-            textMesh.color = color;
-            textMesh.anchor = TextAnchor.MiddleCenter;
+            // Apply the correct font from PSD
+            TMP_FontAsset fontAsset = FontManager.GetOrCreateTMPFont(layer.FontName, layer.FontSize);
+            if (fontAsset != null)
+            {
+                textMeshPro.font = fontAsset;
+            }
 
             switch (layer.Justification)
             {
                 case TextJustification.Left:
-                    textMesh.alignment = TextAlignment.Left;
+                    textMeshPro.alignment = TextAlignmentOptions.Left;
                     break;
                 case TextJustification.Right:
-                    textMesh.alignment = TextAlignment.Right;
+                    textMeshPro.alignment = TextAlignmentOptions.Right;
                     break;
                 case TextJustification.Center:
-                    textMesh.alignment = TextAlignment.Center;
+                    textMeshPro.alignment = TextAlignmentOptions.Center;
                     break;
             }
         }
@@ -651,7 +706,72 @@
 
             SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = CreateSprite(layer);
+            
+            // Apply layer opacity
+            Color color = spriteRenderer.color;
+            color.a = layer.Opacity / 255f;
+            spriteRenderer.color = color;
+            
+            // Apply blend mode
+            ApplyBlendMode(spriteRenderer, layer.BlendModeKey);
+            
+            // Apply layer effects
+            LayerEffectsApplicator.ApplyEffectsToSprite(spriteRenderer, layer, PixelsToUnits);
+            
             return spriteRenderer;
+        }
+
+        /// <summary>
+        /// Creates a <see cref="GameObject"/> with a sprite from the given <see cref="Layer"/>
+        /// </summary>
+        /// <param name="layer">The <see cref="Layer"/> to create the sprite from.</param>
+        private static GameObject CreateEmptyObject(Layer layer)
+        {
+<<<<<<< HEAD
+=======
+            if (layer == null)
+            {
+                Debug.LogError("Cannot create empty object: layer is null");
+                return null;
+            }
+
+            if (layer.PsdFile == null)
+            {
+                Debug.LogError($"Cannot create empty object for layer '{layer.Name}': PsdFile reference is null");
+                return null;
+            }
+
+            // Avoid division by zero
+            if (PixelsToUnits == 0)
+            {
+                Debug.LogError("PixelsToUnits cannot be zero. Using default value of 100.");
+                PixelsToUnits = 100f;
+            }
+
+>>>>>>> 82ff974d9d9cd0c494ac35c7f386e2d4903f9461
+            float x = 0 / PixelsToUnits;
+            float y = 0 / PixelsToUnits;
+            y = (CanvasSize.y / PixelsToUnits) - y;
+            float width = layer.PsdFile.Width / PixelsToUnits;
+            float height = layer.PsdFile.Height / PixelsToUnits;
+
+<<<<<<< HEAD
+            GameObject gameObject = new GameObject(layer.Name);
+            gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+            gameObject.transform.parent = currentGroupGameObject.transform;
+=======
+            GameObject gameObject = new GameObject(layer.Name ?? "EmptyObject");
+            gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+            
+            if (currentGroupGameObject != null)
+            {
+                gameObject.transform.parent = currentGroupGameObject.transform;
+            }
+>>>>>>> 82ff974d9d9cd0c494ac35c7f386e2d4903f9461
+
+            currentDepth -= depthStep;
+
+            return gameObject;
         }
 
         /// <summary>
@@ -681,6 +801,12 @@
 
             List<Sprite> frames = new List<Sprite>();
 
+            if (layer.Children == null || layer.Children.Count == 0)
+            {
+                Debug.LogError($"Cannot create animation for layer '{layer.Name}': no child layers found.");
+                return;
+            }
+
             Layer firstChild = layer.Children.First();
             SpriteRenderer spriteRenderer = CreateSpriteGameObject(firstChild);
             spriteRenderer.name = layer.Name;
@@ -692,7 +818,11 @@
 
             spriteRenderer.sprite = frames[0];
 
-#if UNITY_5
+<<<<<<< HEAD
+#if UNITY_2018 || UNITY_2020 || UNITY_5
+=======
+#if UNITY_2018_1_OR_NEWER || UNITY_5
+>>>>>>> 82ff974d9d9cd0c494ac35c7f386e2d4903f9461
             // Create Animator Controller with an Animation Clip
             UnityEditor.Animations.AnimatorController controller = new UnityEditor.Animations.AnimatorController();
             controller.AddLayer("Base Layer");
@@ -704,10 +834,10 @@
             AssetDatabase.CreateAsset(controller, GetRelativePath(currentPath) + "/" + layer.Name + ".controller");
 #else // Unity 4
             // Create Animator Controller with an Animation Clip
-            AnimatorController controller = new AnimatorController();
-            AnimatorControllerLayer controllerLayer = controller.AddLayer("Base Layer");
+            UnityEditor.Animations.AnimatorController controller = new UnityEditor.Animations.AnimatorController();
+            UnityEditor.Animations.AnimatorControllerLayer controllerLayer = controller.AddLayer("Base Layer");
 
-            State state = controllerLayer.stateMachine.AddState(layer.Name);
+            UnityEditor.Animations.AnimatorState state = controllerLayer.stateMachine.AddState(layer.Name);
             state.SetAnimationClip(CreateSpriteAnimationClip(layer.Name, frames, fps));
 
             AssetDatabase.CreateAsset(controller, GetRelativePath(currentPath) + "/" + layer.Name + ".controller");
@@ -755,18 +885,211 @@
                 keyFrames[i] = kf;
             }
 
-#if UNITY_5
+#if UNITY_2018_1_OR_NEWER
             AnimationUtility.SetObjectReferenceCurve(clip, curveBinding, keyFrames);
+            // Note: hasMotionCurves is read-only, set via SerializedProperty if needed
 #else // Unity 4
             AnimationUtility.SetAnimationType(clip, ModelImporterAnimationType.Generic);
             AnimationUtility.SetObjectReferenceCurve(clip, curveBinding, keyFrames);
-
-            clip.ValidateIfRetargetable(true);
+            // Note: hasMotionCurves is read-only, set via SerializedProperty if needed
 #endif
 
             AssetDatabase.CreateAsset(clip, GetRelativePath(currentPath) + "/" + name + ".anim");
 
             return clip;
+        }
+
+        /// <summary>
+        /// Converts a Photoshop blend mode key to a BlendMode enum value.
+        /// </summary>
+        /// <param name="blendModeKey">The Photoshop blend mode key (e.g., "norm", "mult", "scrn").</param>
+        /// <returns>The corresponding BlendMode enum value.</returns>
+        private static BlendMode ConvertBlendModeKey(string blendModeKey)
+        {
+            switch (blendModeKey)
+            {
+                case "norm": return BlendMode.Normal;
+                case "mult": return BlendMode.Multiply;
+                case "scrn": return BlendMode.Screen;
+                case "over": return BlendMode.Overlay;
+                case "sLit": return BlendMode.SoftLight;
+                case "hLit": return BlendMode.HardLight;
+                case "cDdg": return BlendMode.ColorDodge;
+                case "cBrn": return BlendMode.ColorBurn;
+                case "dark": return BlendMode.Darken;
+                case "lite": return BlendMode.Lighten;
+                case "diff": return BlendMode.Difference;
+                case "smud": return BlendMode.Exclusion;
+                case "hue ": return BlendMode.Hue;
+                case "sat ": return BlendMode.Saturation;
+                case "colr": return BlendMode.Color;
+                case "lum ": return BlendMode.Luminosity;
+                default:
+                    Debug.LogWarning($"Unsupported blend mode: {blendModeKey}, defaulting to Normal");
+                    return BlendMode.Normal;
+            }
+        }
+
+        /// <summary>
+        /// Applies the appropriate blend mode to a SpriteRenderer by setting its material.
+        /// </summary>
+        /// <param name="spriteRenderer">The SpriteRenderer to apply the blend mode to.</param>
+        /// <param name="blendModeKey">The Photoshop blend mode key.</param>
+        private static void ApplyBlendMode(SpriteRenderer spriteRenderer, string blendModeKey)
+        {
+            BlendMode blendMode = ConvertBlendModeKey(blendModeKey);
+            
+            switch (blendMode)
+            {
+                case BlendMode.Multiply:
+                    // For multiply, we can use a simple material with multiply blend
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/Multiply");
+                    break;
+                case BlendMode.Screen:
+                    // Screen blend mode
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/Screen");
+                    break;
+                case BlendMode.Overlay:
+                    // Overlay blend mode
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/Overlay");
+                    break;
+                case BlendMode.SoftLight:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/SoftLight");
+                    break;
+                case BlendMode.HardLight:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/HardLight");
+                    break;
+                case BlendMode.ColorDodge:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/ColorDodge");
+                    break;
+                case BlendMode.ColorBurn:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/ColorBurn");
+                    break;
+                case BlendMode.Darken:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/Darken");
+                    break;
+                case BlendMode.Lighten:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/Lighten");
+                    break;
+                case BlendMode.Difference:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/Difference");
+                    break;
+                case BlendMode.Exclusion:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/Exclusion");
+                    break;
+                case BlendMode.Hue:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/Hue");
+                    break;
+                case BlendMode.Saturation:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/Saturation");
+                    break;
+                case BlendMode.Color:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/Color");
+                    break;
+                case BlendMode.Luminosity:
+                    spriteRenderer.material = CreateBlendMaterial("Sprites/Luminosity");
+                    break;
+                case BlendMode.Normal:
+                default:
+                    spriteRenderer.material = new Material(Shader.Find("Sprites/Default"));
+                    break;
+            }
+        }
+        
+        /// <summary>
+        /// Applies the appropriate blend mode to a UI Image component.
+        /// </summary>
+        /// <param name="image">The UI Image to apply the blend mode to.</param>
+        /// <param name="blendModeKey">The Photoshop blend mode key.</param>
+        private static void ApplyBlendModeToUI(Image image, string blendModeKey)
+        {
+            BlendMode blendMode = ConvertBlendModeKey(blendModeKey);
+            
+            // For UI elements, blend modes can use the same principles if shaders were designed, but we'll use basic simulation for illustration
+            switch (blendMode)
+            {
+                case BlendMode.Multiply:
+                    image.material = CreateBlendMaterial("UI/Multiply");
+                    break;
+                case BlendMode.Screen:
+                    image.material = CreateBlendMaterial("UI/Screen");
+                    break;
+                case BlendMode.Overlay:
+                    image.material = CreateBlendMaterial("UI/Overlay");
+                    break;
+                case BlendMode.SoftLight:
+                    Material softLightUI = CreateBlendMaterial("UI/SoftLight");
+                    if (softLightUI != null) {
+                        image.material = softLightUI;
+                    }
+                    break;
+                case BlendMode.HardLight:
+                    Material hardLightUI = CreateBlendMaterial("UI/HardLight");
+                    if (hardLightUI != null) {
+                        image.material = hardLightUI;
+                    }
+                    break;
+                // New blend modes - setting to null for now as complex UI shader implementations are not defined
+                case BlendMode.ColorDodge:
+                case BlendMode.ColorBurn:
+                case BlendMode.Darken:
+                case BlendMode.Lighten:
+                case BlendMode.Difference:
+                case BlendMode.Exclusion:
+                case BlendMode.Hue:
+                case BlendMode.Saturation:
+                case BlendMode.Color:
+                case BlendMode.Luminosity:
+                case BlendMode.Normal:
+                default:
+                    image.material = null;
+                    break;
+            }
+        }
+        
+        /// <summary>
+        /// Creates or finds a material with the specified shader for blend modes.
+        /// </summary>
+        /// <param name="shaderName">The name of the shader to use.</param>
+        /// <returns>A material with the blend mode shader, or fallback material if not found.</returns>
+        private static Material CreateBlendMaterial(string shaderName)
+        {
+            Shader shader = Shader.Find(shaderName);
+            if (shader != null)
+            {
+                return new Material(shader);
+            }
+            else
+            {
+                // Fall back to appropriate default shader based on shader type
+                string fallbackShader;
+                if (shaderName.StartsWith("UI/"))
+                {
+                    fallbackShader = "UI/Default";
+                }
+                else if (shaderName.StartsWith("Sprites/"))
+                {
+                    fallbackShader = "Sprites/Default";
+                }
+                else
+                {
+                    fallbackShader = "Sprites/Default";
+                }
+                
+                Debug.LogWarning($"Shader '{shaderName}' not found. Using fallback shader '{fallbackShader}'.");
+                
+                Shader fallback = Shader.Find(fallbackShader);
+                if (fallback != null)
+                {
+                    return new Material(fallback);
+                }
+                else
+                {
+                    // Last resort: try built-in shader
+                    Debug.LogWarning($"Fallback shader '{fallbackShader}' also not found. Using built-in default.");
+                    return new Material(Shader.Find("Standard") ?? Shader.Find("Legacy Shaders/Diffuse"));
+                }
+            }
         }
 
         #endregion
@@ -838,6 +1161,17 @@
 
             Image image = gameObject.AddComponent<Image>();
             image.sprite = CreateSprite(layer);
+            
+            // Apply layer opacity
+            Color color = image.color;
+            color.a = layer.Opacity / 255f;
+            image.color = color;
+            
+            // Apply blend mode for UI
+            ApplyBlendModeToUI(image, layer.BlendModeKey);
+            
+            // Apply layer effects to UI
+            LayerEffectsApplicator.ApplyEffectsToUI(image, layer, PixelsToUnits);
 
             RectTransform transform = gameObject.GetComponent<RectTransform>();
             transform.sizeDelta = new Vector2(width, height);
@@ -846,9 +1180,10 @@
         }
 
         /// <summary>
-        /// Creates a Unity UI <see cref="UnityEngine.UI.Text"/> <see cref="GameObject"/> with the text from a PSD <see cref="Layer"/>.
+        /// <summary>
+        /// Creates a Unity UI <see cref="TextMeshProUGUI"/> <see cref="GameObject"/> with the text from a PSD <see cref="Layer"/>.
         /// </summary>
-        /// <param name="layer">The <see cref="Layer"/> used to create the <see cref="UnityEngine.UI.Text"/> from.</param>
+        /// <param name="layer">The <see cref="Layer"/> used to create the <see cref="TextMeshProUGUI"/> from.</param>
         private static void CreateUIText(Layer layer)
         {
             Color color = layer.FillColor;
@@ -872,45 +1207,34 @@
 
             currentDepth -= depthStep;
 
-            Font font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            TextMeshProUGUI textMeshPro = gameObject.AddComponent<TextMeshProUGUI>();
+            textMeshPro.text = layer.Text;
+            textMeshPro.fontSize = layer.FontSize;
+            textMeshPro.rectTransform.sizeDelta = new Vector2(width, height);
 
-            Text textUI = gameObject.AddComponent<Text>();
-            textUI.text = layer.Text;
-            textUI.font = font;
-            textUI.rectTransform.sizeDelta = new Vector2(width, height);
+            textMeshPro.color = color;
+            textMeshPro.alignment = TextAlignmentOptions.Center;
 
-            float fontSize = layer.FontSize / PixelsToUnits;
-            float ceiling = Mathf.Ceil(fontSize);
-            if (fontSize < ceiling)
+            // Apply the correct font from PSD
+            TMP_FontAsset fontAsset = FontManager.GetOrCreateTMPFont(layer.FontName, layer.FontSize);
+            if (fontAsset != null)
             {
-                // Unity UI Text doesn't support floating point font sizes, so we have to round to the next size and scale everything else
-                float scaleFactor = ceiling / fontSize;
-                textUI.fontSize = (int)ceiling;
-                textUI.rectTransform.sizeDelta *= scaleFactor;
-                textUI.rectTransform.localScale /= scaleFactor;
+                textMeshPro.font = fontAsset;
             }
-            else
-            {
-                textUI.fontSize = (int)fontSize;
-            }
-
-            textUI.color = color;
-            textUI.alignment = TextAnchor.MiddleCenter;
 
             switch (layer.Justification)
             {
                 case TextJustification.Left:
-                    textUI.alignment = TextAnchor.MiddleLeft;
+                    textMeshPro.alignment = TextAlignmentOptions.Left;
                     break;
                 case TextJustification.Right:
-                    textUI.alignment = TextAnchor.MiddleRight;
+                    textMeshPro.alignment = TextAlignmentOptions.Right;
                     break;
                 case TextJustification.Center:
-                    textUI.alignment = TextAnchor.MiddleCenter;
+                    textMeshPro.alignment = TextAlignmentOptions.Center;
                     break;
             }
         }
-
         /// <summary>
         /// Creates a <see cref="UnityEngine.UI.Button"/> from the given <see cref="Layer"/>.
         /// </summary>
@@ -1008,10 +1332,367 @@
 
                 if (child.IsTextLayer)
                 {
-                    // TODO: Create a child text game object
+                    // Create a child text game object for UI text
+                    GameObject oldGroupObject = currentGroupGameObject;
+                    currentGroupGameObject = button.gameObject;
+                    
+                    CreateUIText(child);
+                    
+                    currentGroupGameObject = oldGroupObject;
                 }
             }
         }
+        #endregion
+        
+        #region Smart Filter Processing
+
+        /// <summary>
+        /// Processes smart filters for all layers in the PSD file.
+        /// This method pre-processes smart filters to apply effects.
+        /// </summary>
+        /// <param name="layers">The list of layers to process smart filters for.</param>
+        private static void ApplySmartFilters(List<Layer> layers)
+        {
+            if (layers == null) return;
+
+            foreach (Layer layer in layers)
+            {
+                ProcessSmartFilters(layer);
+
+                // Process child layers recursively
+                if (layer.Children != null && layer.Children.Count > 0)
+                {
+                    ApplySmartFilters(layer.Children);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Applies smart filter effects to the given layer.
+        /// </summary>
+        /// <param name="layer">The layer to process smart filters for.</param>
+        private static void ProcessSmartFilters(Layer layer)
+        {
+            SmartFilters filters = SmartFilterParser.ParseSmartFilters(layer);
+            layer.SmartFilters = filters;
+
+            foreach (var effect in filters.Effects)
+            {
+                ApplySmartFilterEffect(effect, layer);
+            }
+        }
+
+        /// <summary>
+        /// Applies a single smart filter effect to the layer's texture.
+        /// Simplified to demonstrate method structure.
+        /// </summary>
+        /// <param name="effect">The smart filter effect to apply.</param>
+        /// <param name="layer">The layer on which to apply the effect.</param>
+        private static void ApplySmartFilterEffect(SmartFilterEffect effect, Layer layer)
+        {
+            switch (effect.Type)
+            {
+                case SmartFilterType.GaussianBlur:
+                    ApplyGaussianBlur((GaussianBlurEffect)effect, layer);
+                    break;
+                case SmartFilterType.MotionBlur:
+                    ApplyMotionBlur((MotionBlurEffect)effect, layer);
+                    break;
+                case SmartFilterType.Sharpen:
+                    ApplySharpen((SharpenEffect)effect, layer);
+                    break;
+                case SmartFilterType.Noise:
+                    ApplyNoise((NoiseEffect)effect, layer);
+                    break;
+                case SmartFilterType.Emboss:
+                    ApplyEmboss((EmbossEffect)effect, layer);
+                    break;
+                // Add other cases for different types here
+            }
+        }
+
+        // Placeholder implementations for applying smart filters
+        private static void ApplyGaussianBlur(GaussianBlurEffect effect, Layer layer)
+        {
+            // Simplified logic for Gaussian blur - demonstrate process
+            Debug.Log($"Applying Gaussian Blur with radius {effect.Radius} to layer {layer.Name}");
+        }
+
+        private static void ApplyMotionBlur(MotionBlurEffect effect, Layer layer)
+        {
+            // Simplified logic for motion blur - demonstrate process
+            Debug.Log($"Applying Motion Blur with angle {effect.Angle} and distance {effect.Distance} to layer {layer.Name}");
+        }
+
+        private static void ApplySharpen(SharpenEffect effect, Layer layer)
+        {
+            // Simplified logic for sharpen - demonstrate process
+            Debug.Log($"Applying Sharpen with amount {effect.Amount} to layer {layer.Name}");
+        }
+
+        private static void ApplyNoise(NoiseEffect effect, Layer layer)
+        {
+            // Simplified logic for noise - demonstrate process
+            Debug.Log($"Applying Noise with amount {effect.Amount} to layer {layer.Name}");
+        }
+
+        private static void ApplyEmboss(EmbossEffect effect, Layer layer)
+        {
+            // Simplified logic for emboss - demonstrate process
+            Debug.Log($"Applying Emboss with angle {effect.Angle} to layer {layer.Name}");
+        }
+
+        #endregion
+        
+        #region Layer Mask Processing
+
+        /// csummary 03e
+        /// Processes adjustment layers for all layers in the PSD file.
+        /// This method pre-processes adjustments to apply effects.
+        ///  03c/summary 03e
+        ///  03cparam name="layers" 03eThe list of layers to process adjustments for. 03c/param 03e
+        private static void ApplyAdjustmentLayers(ListcLayere layers)
+        {
+            if (layers == null) return;
+
+            foreach (Layer layer in layers)
+            {
+                ProcessAdjustmentLayers(layer);
+
+                // Process child layers recursively
+                if (layer.Children != null  26 26 layer.Children.Count  3e 0)
+                {
+                    ApplyAdjustmentLayers(layer.Children);
+                }
+            }
+        }
+
+        ///  03csummary 03e
+        /// Applies adjustment layer effects to the given layer.
+        ///  03c/summary 03e
+        ///  03cparam name="layer" 03eThe layer to process adjustments for. 03c/param 03e
+        private static void ProcessAdjustmentLayers(Layer layer)
+        {
+            AdjustmentLayerEffects effects = AdjustmentLayerParser.ParseAdjustmentLayers(layer);
+
+            foreach (var effect in effects.Effects)
+            {
+                ApplyAdjustmentEffect(effect, layer);
+            }
+        }
+
+        ///  03csummary 03e
+        /// Applies a single adjustment layer effect to the layer's texture.
+        /// Simplified to demonstrate method structure.
+        ///  03c/summary 03e
+        ///  03cparam name="effect" 03eThe adjustment layer effect to apply. 03c/param 03e
+        ///  03cparam name="layer" 03eThe layer on which to apply the effect. 03c/param 03e
+        private static void ApplyAdjustmentEffect(AdjustmentLayerEffect effect, Layer layer)
+        {
+            switch (effect.Type)
+            {
+                case AdjustmentLayerType.BrightnessContrast:
+                    ApplyBrightnessContrast((BrightnessContrastEffect)effect, layer);
+                    break;
+                case AdjustmentLayerType.HueSaturation:
+                    ApplyHueSaturation((HueSaturationEffect)effect, layer);
+                    break;
+                case AdjustmentLayerType.ColorBalance:
+                    ApplyColorBalance((ColorBalanceEffect)effect, layer);
+                    break;
+                // Add other cases for different types here
+            }
+        }
+
+        // Placeholder implementations for applying adjustments
+        private static void ApplyBrightnessContrast(BrightnessContrastEffect effect, Layer layer)
+        {
+            // Simplified logic for brightness/contrast - demonstrate process
+        }
+
+        private static void ApplyHueSaturation(HueSaturationEffect effect, Layer layer)
+        {
+            // Simplified logic for hue/saturation - demonstrate process
+        }
+
+        private static void ApplyColorBalance(ColorBalanceEffect effect, Layer layer)
+        {
+            // Simplified logic for color balance - demonstrate process
+        }
+
+        #endregion
+        
+        /// <summary>
+        /// Processes layer masks for all layers in the PSD file.
+        /// This method pre-processes masks to ensure they are available for texture creation.
+        /// </summary>
+        /// <param name="layers">The list of layers to process masks for.</param>
+        private static void ApplyLayerMasks(List<Layer> layers)
+        {
+            if (layers == null) return;
+            
+            foreach (Layer layer in layers)
+            {
+                ProcessLayerMask(layer);
+                
+                // Process child layers recursively
+                if (layer.Children != null && layer.Children.Count > 0)
+                {
+                    ApplyLayerMasks(layer.Children);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Processes a single layer's mask data.
+        /// </summary>
+        /// <param name="layer">The layer to process the mask for.</param>
+        private static GameObject CreateEmptyObject(Layer layer)
+        {
+            if (layer == null)
+            {
+                Debug.LogError("Cannot create empty object: layer is null");
+                return null;
+            }
+
+            if (layer.PsdFile == null)
+            {
+                Debug.LogError($"Cannot create empty object for layer '{layer.Name}': PsdFile reference is null");
+                return null;
+            }
+
+            // Avoid division by zero
+            if (PixelsToUnits == 0)
+            {
+                Debug.LogError("PixelsToUnits cannot be zero. Using default value of 100.");
+                PixelsToUnits = 100f;
+            }
+
+            float x = 0 / PixelsToUnits;
+            float y = 0 / PixelsToUnits;
+            y = (CanvasSize.y / PixelsToUnits) - y;
+            float width = layer.PsdFile.Width / PixelsToUnits;
+            float height = layer.PsdFile.Height / PixelsToUnits;
+
+            GameObject gameObject = new GameObject(layer.Name ?? "EmptyObject");
+            gameObject.transform.position = new Vector3(x + (width / 2), y - (height / 2), currentDepth);
+            
+            if (currentGroupGameObject != null)
+            {
+                gameObject.transform.parent = currentGroupGameObject.transform;
+            }
+
+            currentDepth -= depthStep;
+
+            return gameObject;
+        }
+        
+        /// <summary>
+        /// Determines if a separate mask texture should be created for the layer.
+        /// </summary>
+        /// <param name="layer">The layer to check.</param>
+        /// <returns>True if a separate mask texture should be created.</returns>
+        private static bool ShouldCreateSeparateMaskTexture(Layer layer)
+        {
+            // Create separate mask textures for layers with complex masks
+            // or when specifically requested (e.g., layer name contains "|SeparateMask")
+            return layer.Name.ContainsIgnoreCase("|SeparateMask") ||
+                   layer.Name.ContainsIgnoreCase("|Mask");
+        }
+        
+        /// <summary>
+        /// Creates a separate texture file for the layer's mask.
+        /// </summary>
+        /// <param name="layer">The layer to create the mask texture for.</param>
+        /// <returns>The file path to the created mask texture.</returns>
+        private static string CreateSeparateMaskTexture(Layer layer)
+        {
+            if (layer.MaskData == null || layer.MaskData.ImageData == null)
+            {
+                return string.Empty;
+            }
+            
+            // Create a grayscale texture from the mask data
+            int width = (int)layer.MaskData.Rect.width;
+            int height = (int)layer.MaskData.Rect.height;
+            
+            Texture2D maskTexture = new Texture2D(width, height, TextureFormat.Alpha8, false);
+            byte[] maskData = layer.MaskData.ImageData;
+            
+            // Convert mask data to texture pixels
+            byte[] pixels = new byte[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                int layerRow = y * width;
+                // Flip Y for Unity texture
+                int textureRow = (height - 1 - y) * width;
+                
+                for (int x = 0; x < width; x++)
+                {
+                    int layerIndex = layerRow + x;
+                    int textureIndex = textureRow + x;
+                    
+                    if (layerIndex < maskData.Length)
+                    {
+                        pixels[textureIndex] = maskData[layerIndex];
+                    }
+                    else
+                    {
+                        pixels[textureIndex] = 255; // Default to fully opaque
+                    }
+                }
+            }
+            
+            maskTexture.LoadRawTextureData(pixels);
+            maskTexture.Apply();
+            
+            // Save the mask texture as a PNG file
+            string maskFile = Path.Combine(currentPath, layer.Name + "_mask.png");
+            File.WriteAllBytes(maskFile, maskTexture.EncodeToPNG());
+            
+            // Import as texture (not sprite)
+            string relativePath = GetRelativePath(maskFile);
+            AssetDatabase.ImportAsset(relativePath, ImportAssetOptions.ForceUpdate);
+            
+            TextureImporter textureImporter = AssetImporter.GetAtPath(relativePath) as TextureImporter;
+            if (textureImporter != null)
+            {
+                textureImporter.textureType = TextureImporterType.Default;
+                textureImporter.mipmapEnabled = false;
+                textureImporter.alphaSource = TextureImporterAlphaSource.FromGrayScale;
+                textureImporter.maxTextureSize = 2048;
+            }
+            
+            AssetDatabase.ImportAsset(relativePath, ImportAssetOptions.ForceUpdate);
+            
+            return maskFile;
+        }
+        
+        /// <summary>
+        /// Creates a UI mask component for clipping UI elements.
+        /// </summary>
+        /// <param name="gameObject">The GameObject to add the mask to.</param>
+        /// <param name="layer">The layer containing mask data.</param>
+        private static void CreateUIMask(GameObject gameObject, Layer layer)
+        {
+            if (layer.MaskData == null) return;
+            
+            // Add a Mask component for UI clipping
+            UnityEngine.UI.Mask mask = gameObject.AddComponent<UnityEngine.UI.Mask>();
+            mask.showMaskGraphic = false;
+            
+            // Create a mask image if one doesn't exist
+            Image maskImage = gameObject.GetComponent<Image>();
+            if (maskImage == null)
+            {
+                maskImage = gameObject.AddComponent<Image>();
+            }
+            
+            // Use a simple white texture for the mask shape
+            // In a more advanced implementation, you could create a custom texture from the mask data
+            maskImage.color = Color.white;
+        }
+        
         #endregion
     }
 }

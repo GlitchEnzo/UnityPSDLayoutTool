@@ -1,7 +1,7 @@
-﻿namespace PhotoshopFile
-{
-    using System.IO;
+﻿using System.IO;
 
+namespace PhotoshopFile
+{
     /// <summary>
     /// The adjustment information for a layer
     /// </summary>

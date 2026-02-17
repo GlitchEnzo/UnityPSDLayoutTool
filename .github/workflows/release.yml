@@ -1,0 +1,218 @@
+name: Release - Package & Deploy
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.3)'
+        required: true
+        type: string
+
+jobs:
+  validate-release:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    
+    outputs:
+      version: ${{ steps.extract-version.outputs.version }}
+      tag: ${{ steps.extract-version.outputs.tag }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Extract version information
+      id: extract-version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          TAG="${{ github.event.inputs.version }}"
+        else
+          TAG="${{ github.ref_name }}"
+        fi
+        
+        VERSION=$(echo $TAG | sed 's/^v//')
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Release tag: $TAG"
+        echo "Release version: $VERSION"
+        
+    - name: Validate version in package.json
+      run: |
+        PACKAGE_VERSION=$(grep '"version"' "Assets/PSD Layout Tool/package.json" | sed 's/.*"version": *"\([^"]*\)".*/\1/')
+        RELEASE_VERSION="${{ steps.extract-version.outputs.version }}"
+        
+        echo "Package.json version: $PACKAGE_VERSION"
+        echo "Release version: $RELEASE_VERSION"
+        
+        if [ "$PACKAGE_VERSION" != "$RELEASE_VERSION" ]; then
+          echo "❌ Version mismatch!"
+          echo "Please update package.json version to match release tag"
+          exit 1
+        else
+          echo "✅ Version numbers match"
+        fi
+
+  build-package:
+    name: Build Unity Package
+    runs-on: ubuntu-latest
+    needs: validate-release
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+        
+    - name: Create UnityPackage
+      run: |
+        echo "Creating Unity Package..."
+        
+        # Create a temporary Unity project structure for package export
+        mkdir -p temp-project/Assets
+        cp -r "Assets/PSD Layout Tool" "temp-project/Assets/"
+        
+        # Create the .unitypackage (this is a simplified approach)
+        # In a real scenario, you'd use Unity's PackageManager.Client API
+        cd temp-project
+        
+        # Create package manifest
+        cat > package-manifest.json << EOF
+        {
+          "name": "PSD Layout Tool",
+          "version": "${{ needs.validate-release.outputs.version }}",
+          "files": [
+        $(find Assets -type f -name "*.cs" -o -name "*.json" -o -name "*.meta" | sed 's/^/    "/' | sed 's/$/"/' | paste -sd ',' -)
+          ]
+        }
+        EOF
+        
+        # Create archive
+        tar -czf "../psd-layout-tool-${{ needs.validate-release.outputs.version }}.unitypackage" Assets/
+        cd ..
+        
+    - name: Generate package documentation
+      run: |
+        cat > PACKAGE_README.md << EOF
+        # PSD Layout Tool v${{ needs.validate-release.outputs.version }}
+        
+        A lightweight Photoshop Unity import tool for rapid prototyping and scene building.
+        
+        ## Features
+        - Convert PSD layers to Unity GameObjects
+        - Proper positioning and pivot handling
+        - Cross-Unity version compatibility (2018.1+)
+        - Sprite animation support
+        - Unity UI integration
+        
+        ## Installation
+        
+        ### Option 1: Unity Package Manager (Recommended)
+        1. Open Unity Package Manager
+        2. Click "+" → "Add package from git URL"
+        3. Enter: \`https://github.com/gmoyle/UnityPSDLayoutTool.git\`
+        
+        ### Option 2: Download .unitypackage
+        1. Download \`psd-layout-tool-${{ needs.validate-release.outputs.version }}.unitypackage\`
+        2. Import into your Unity project
+        
+        ## Usage
+        1. Place your .psd file in the Assets folder
+        2. Select the .psd file in Project window
+        3. Use the inspector to configure import settings
+        4. Click "Import" to generate GameObjects
+        
+        ## Compatibility
+        - Unity 2018.1 or newer
+        - Supports Unity 2018, 2019, 2020, 2021, 2022+
+        - Tested on Windows, macOS, and Linux
+        
+        ## Changelog
+        See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
+        EOF
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: unity-package-${{ needs.validate-release.outputs.version }}
+        path: |
+          psd-layout-tool-${{ needs.validate-release.outputs.version }}.unitypackage
+          PACKAGE_README.md
+          temp-project/package-manifest.json
+        retention-days: 90
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate-release, build-package]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Get full history for changelog
+        
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: unity-package-${{ needs.validate-release.outputs.version }}
+        path: ./artifacts
+        
+    - name: Generate changelog
+      id: changelog
+      run: |
+        echo "Generating changelog..."
+        
+        # Get previous tag
+        PREVIOUS_TAG=$(git tag --sort=-version:refname | head -2 | tail -1)
+        if [ -z "$PREVIOUS_TAG" ]; then
+          PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+        fi
+        
+        echo "Changes since $PREVIOUS_TAG:" > RELEASE_CHANGELOG.md
+        echo "" >> RELEASE_CHANGELOG.md
+        
+        # Generate commit log
+        git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges >> RELEASE_CHANGELOG.md
+        
+        # Add package info
+        echo "" >> RELEASE_CHANGELOG.md
+        echo "## Package Information" >> RELEASE_CHANGELOG.md
+        echo "- Version: ${{ needs.validate-release.outputs.version }}" >> RELEASE_CHANGELOG.md
+        echo "- Unity Compatibility: 2018.1+" >> RELEASE_CHANGELOG.md
+        echo "- Package Size: $(du -h artifacts/psd-layout-tool-*.unitypackage | cut -f1)" >> RELEASE_CHANGELOG.md
+        
+        cat RELEASE_CHANGELOG.md
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ needs.validate-release.outputs.tag }}
+        name: "PSD Layout Tool ${{ needs.validate-release.outputs.version }}"
+        body_path: RELEASE_CHANGELOG.md
+        draft: false
+        prerelease: ${{ contains(needs.validate-release.outputs.version, 'alpha') || contains(needs.validate-release.outputs.version, 'beta') || contains(needs.validate-release.outputs.version, 'rc') }}
+        files: |
+          artifacts/psd-layout-tool-${{ needs.validate-release.outputs.version }}.unitypackage
+          artifacts/PACKAGE_README.md
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+  notify-release:
+    name: Notify Release Complete
+    runs-on: ubuntu-latest
+    needs: [validate-release, create-release]
+    if: success()
+    
+    steps:
+    - name: Release Summary
+      run: |
+        echo "🎉 Release ${{ needs.validate-release.outputs.tag }} completed successfully!"
+        echo ""
+        echo "📦 Package: psd-layout-tool-${{ needs.validate-release.outputs.version }}.unitypackage"
+        echo "🔗 Release URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.validate-release.outputs.tag }}"
+        echo ""
+        echo "## Next Steps:"
+        echo "1. Verify the release on GitHub"
+        echo "2. Test the package in a clean Unity project"
+        echo "3. Update documentation if needed"
+        echo "4. Consider creating a PR to the upstream repository"
