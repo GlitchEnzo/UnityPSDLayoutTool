@@ -6,7 +6,7 @@
     using System.Linq;
     using System.Xml;
     using System.Xml.Linq;
-
+    using UnityEngine;
     /// <summary>
     /// A class that represents a loaded PSD file.
     /// </summary>
@@ -141,13 +141,15 @@
         /// <param name="reader">The reader containing the PSD file data</param>
         private void LoadHeader(BinaryReverseReader reader)
         {
-            if (new string(reader.ReadChars(4)) != "8BPS")
+            string strHead = reader .readStringNew(4);
+            if (strHead != "8BPS")
             {
                 UnityEngine.Debug.LogError("The given stream is not a valid PSD file");
                 throw new IOException("The given stream is not a valid PSD file");
             }
 
             Version = reader.ReadInt16();
+            //Debug.Log(Time.time + "read version=" + Version);
             if (Version != 1)
             {
                 UnityEngine.Debug.LogError("The PSD file has an invalid version");
@@ -169,6 +171,7 @@
         private void LoadColorModeData(BinaryReverseReader reader)
         {
             uint num = reader.ReadUInt32();
+        //    Debug.Log(Time.time + "LoadColorModeData number=" + num);
             if (num <= 0U)
             {
                 return;
@@ -185,6 +188,7 @@
         {
             ImageResources.Clear();
             uint num = reader.ReadUInt32();
+ 
             if (num <= 0U)
             {
                 return;
@@ -194,6 +198,7 @@
             while (reader.BaseStream.Position - position < num)
             {
                 ImageResource imgRes = new ImageResource(reader);
+               //Debug.Log(Time.time + ",read imgRes.ID= " + imgRes.ID);
                 switch ((ResourceIDs)imgRes.ID)
                 {
                     case ResourceIDs.XMLInfo:
@@ -203,7 +208,6 @@
                         {
                             Category = source.First().Value;
                         }
-
                         break;
 
                     case ResourceIDs.ResolutionInfo:
@@ -212,6 +216,16 @@
 
                     case ResourceIDs.AlphaChannelNames:
                         imgRes = new AlphaChannels(imgRes);
+                        break;
+
+                    case ResourceIDs.PsCCOrignPathInfo:
+                        imgRes = new AlphaChannels(imgRes);
+                        break;
+                    case ResourceIDs.PsCCPathSelectionState:
+                        imgRes = new AlphaChannels(imgRes);
+                        break;
+                    case ResourceIDs.TransparencyIndex:
+                        Debug.Log("have transparent ");
                         break;
                 }
 
@@ -227,7 +241,8 @@
         /// <param name="reader">The reader to use to read the layer and mask info.</param>
         private void LoadLayerAndMaskInfo(BinaryReverseReader reader)
         {
-            uint num = reader.ReadUInt32();
+            //long numnew = reader.ReadInt64();
+            long num =   reader.ReadUInt32();
             if (num <= 0U)
             {
                 return;
@@ -245,21 +260,25 @@
         /// <param name="reader">The reader to use to read the layers.</param>
         private void LoadLayers(BinaryReverseReader reader)
         {
-            uint num1 = reader.ReadUInt32();
+            int num1 =  reader.ReadInt32();//.ReadUInt32(); ;// reader.ReadUInt32();
+            //  Debug.Log(Time.time + "LoadLayers num1=" + num1 + ",return ?" + (num1 <= 0U));
+
             if (num1 <= 0U)
             {
                 return;
             }
 
             long position = reader.BaseStream.Position;
-            short num2 = reader.ReadInt16();
+             short num2 = reader.ReadInt16();
             if (num2 < 0)
             {
                 AbsoluteAlpha = true;
-                num2 = Math.Abs(num2);
+                 num2 = Math.Abs(num2);
             }
 
             Layers.Clear();
+          
+            //Debug.Log(Time.time + "LoadLayers num2=" + num2 + ",return ?" + (num2 == 0));
             if (num2 == 0)
             {
                 return;

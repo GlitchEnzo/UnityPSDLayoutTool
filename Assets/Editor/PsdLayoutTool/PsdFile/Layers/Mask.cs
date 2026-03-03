@@ -32,6 +32,7 @@
         {
             Layer = layer;
             uint num1 = reader.ReadUInt32();
+            Debug.Log("mask num1=" + num1);
             if (num1 <= 0U)
             {
                 return;
@@ -45,16 +46,35 @@
             rect.width = reader.ReadInt32() - rect.x;
             DefaultColor = reader.ReadByte();
             flags = new BitVector32(reader.ReadByte());
+
+            int tempNum1 = -1;
+            int tempNum2 = -1;
+            int tempNum3 = -1;
+            int tempNum4 = -1;
+            int tempNum5 = -1;
+            int tempNum6 = -1;
+
             if ((int)num1 == 36)
             {
-                reader.ReadByte();  // bit vector
-                reader.ReadByte();  // ???
-                reader.ReadInt32(); // rect Y
-                reader.ReadInt32(); // rect X
-                reader.ReadInt32(); // rect total height (actual height = this - Y)
-                reader.ReadInt32(); // rect total width (actual width = this - Y)
+                tempNum1= reader.ReadByte();  // bit vector
+                tempNum2= reader.ReadByte();  // ???
+             tempNum3=   reader.ReadInt32(); // rect Y
+                tempNum4= reader.ReadInt32(); // rect X
+                tempNum5= reader.ReadInt32(); // rect total height (actual height = this - Y)
+                tempNum6= reader.ReadInt32(); // rect total width (actual width = this - Y)
             }
-
+             
+            Debug.Log("燕茹 Mask data"
+                +",num1="+num1
+                + ",DefaultColor=" + DefaultColor
+                +",flags="+flags
+                + ",tempNum1="+ tempNum1
+                + ",tempNum2=" + tempNum2
+                + ",tempNum3=" + tempNum3
+                + ",tempNum4=" + tempNum4
+                + ",tempNum5=" + tempNum5
+                + ",tempNum6=" + tempNum6
+                );
             reader.BaseStream.Position = position + num1;
         }
 

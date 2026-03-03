@@ -34,6 +34,16 @@
         {
             // use reflection to get the default Inspector
             Type type = Type.GetType("UnityEditor.TextureImporterInspector, UnityEditor");
+
+            if(target==null )
+            {
+                Debug.Log(Time.time + "target is null");
+            }
+            if (type == null)
+            {
+                Debug.Log(Time.time + "type is null");
+            }
+
             nativeEditor = CreateEditor(target, type);
 
             // set up the GUI style for the section headers
@@ -45,6 +55,18 @@
             if (Application.HasProLicense())
             {
                 guiStyle.normal.textColor = Color.white;
+            }
+
+
+            TextureImporter import = (TextureImporter)target;
+            if (import.textureType != TextureImporterType.Sprite)
+            {
+                import.textureType = TextureImporterType.Sprite;
+                import.mipmapEnabled = false;
+                import.filterMode = FilterMode.Bilinear;
+                import.SaveAndReimport();
+                import.textureFormat = TextureImporterFormat.AutomaticCompressed;
+                Debug.Log(Time.time + " focuse on cur image forse set Image as Sprite type！");
             }
         }
 
@@ -59,33 +81,60 @@
                 // check if it is a PSD file selected
                 string assetPath = ((TextureImporter)target).assetPath;
 
-                if (assetPath.EndsWith(".psd"))
+                if (assetPath.EndsWith(PsdImporter.PSD_TAIL))
                 {
                     GUILayout.Label("<b>PSD Layout Tool</b>", guiStyle, GUILayout.Height(23));
 
-                    GUIContent maximumDepthLabel = new GUIContent("Maximum Depth", "The Z value of the far back plane. The PSD will be laid out from here to 0.");
-                    PsdImporter.MaximumDepth = EditorGUILayout.FloatField(maximumDepthLabel, PsdImporter.MaximumDepth);
+                    //All ui depth is the same 1
+                    //GUIContent maximumDepthLabel = new GUIContent("Maximum Depth", "The Z value of the far back plane. The PSD will be laid out from here to 0.");
+                    //PsdImporter.MaximumDepth = EditorGUILayout.FloatField(maximumDepthLabel, PsdImporter.MaximumDepth);
 
-                    GUIContent pixelsToUnitsLabel = new GUIContent("Pixels to Unity Units", "The scale of the Sprite objects, in the number of pixels to Unity world units.");
-                    PsdImporter.PixelsToUnits = EditorGUILayout.FloatField(pixelsToUnitsLabel, PsdImporter.PixelsToUnits);
+                    //modify by yanru
+                    //GUIContent pixelsToUnitsLabel = new GUIContent("Pixels to Unity Units", "The scale of the Sprite objects, in the number of pixels to Unity world units.");
+                    //PsdImporter.PixelsToUnits = EditorGUILayout.FloatField(pixelsToUnitsLabel, PsdImporter.PixelsToUnits);
 
-                    GUIContent useUnityUILabel = new GUIContent("Use Unity UI", "Create Unity UI elements instead of \"normal\" GameObjects.");
-                    PsdImporter.UseUnityUI = EditorGUILayout.Toggle(useUnityUILabel, PsdImporter.UseUnityUI);
+                    //GUIContent useUnityUILabel = new GUIContent("Use Unity UI", "Create Unity UI elements instead of \"normal\" GameObjects.");
+                    //PsdImporter.UseUnityUI = EditorGUILayout.Toggle(useUnityUILabel, PsdImporter.UseUnityUI);
+
+                    //set ui width and height;       
+                    GUIContent screenSize = new GUIContent("屏幕分辨率", "UI 宽*高");
+                    PsdImporter.ScreenResolution = EditorGUILayout.Vector2Field(screenSize, PsdImporter.ScreenResolution);
+
+                    GUIContent imageSizeLimit = new GUIContent("小图限制(超过该尺寸 建议拆分图集)", "小图尺寸限制(超过该尺寸 建议拆出图集)");
+                    PsdImporter.LargeImageAlarm = EditorGUILayout.Vector2Field(imageSizeLimit, PsdImporter.LargeImageAlarm);
+
+                    //set textFont
+                    GUIContent fontName = new GUIContent("字体名称", "字体名称");
+                    PsdImporter.textFont = EditorGUILayout.TextField(fontName, PsdImporter.textFont);
+
+                    //force use fullScreenUI
+                    //GUIContent useFullScreenUI = new GUIContent("useFullScreenUI", "useFullScreenUI");
+                    //PsdImporter.fullScreenUI = EditorGUILayout.Toggle(useFullScreenUI, PsdImporter.fullScreenUI);
 
                     // draw our custom buttons for PSD files
-                    if (GUILayout.Button("Export Layers as Textures"))
-                    {
-                        PsdImporter.ExportLayersAsTextures(assetPath);
-                    }
+                    //if (GUILayout.Button("Export Layers as Textures"))
+                    //{
+                    //    PsdImporter.ExportLayersAsTextures(assetPath);
+                    //}
 
                     if (GUILayout.Button("Layout in Current Scene"))
                     {
                         PsdImporter.LayoutInCurrentScene(assetPath);
                     }
 
+                    if (GUILayout.Button("Layout in Current Scene(use image real size)"))
+                    {
+                        PsdImporter.LayoutInCurrentScene(assetPath, true);
+                    }
+
                     if (GUILayout.Button("Generate Prefab"))
                     {
                         PsdImporter.GeneratePrefab(assetPath);
+                    }
+
+                    if (GUILayout.Button("test ClickButton"))
+                    {
+                        PsdImporter.TestClick();
                     }
 
                     GUILayout.Space(3);
@@ -109,7 +158,6 @@
             // Unfortunately we cant hide the ImportedObject section because the interal InspectorWindow checks via
             // "if (editor is AssetImporterEditor)" and all flags that this check sets are method local variables
             // so aside from direct patching UnityEditor.dll, reflection cannot be used here.
-
             // Therefore we just move the ImportedObject section out of view
             ////GUILayout.Space(2048);
         }
